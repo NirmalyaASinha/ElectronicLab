@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PageTransition } from '@/components/dashboard/PageTransition';
-import { CheckCircle, AlertCircle, Loader, Send } from 'lucide-react';
-import { getRelativeTime } from '@/lib/date-utils';
+import { Loader, AlertCircle } from 'lucide-react';
+import RequestCard from '@/components/shared/RequestCard';
 
 interface Component {
   name: string;
@@ -17,6 +16,7 @@ interface Request {
   studentName: string;
   studentRoll: string;
   studentDept: string;
+  studentEmail?: string;
   status: string;
   purpose: string;
   requestedAt: string;
@@ -24,14 +24,10 @@ interface Request {
   items: Component[];
 }
 
-interface RequestWithUI extends Request {
-  isProcessing: boolean;
-}
-
 export const dynamic = 'force-dynamic';
 
 export default function FacultyIssued() {
-  const [requests, setRequests] = useState<RequestWithUI[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -47,16 +43,10 @@ export default function FacultyIssued() {
       const data = await res.json();
 
       if (data.success && data.data) {
-        // Filter only APPROVED requests (not yet issued)
         const approvedRequests = data.data.filter(
           (req: { status: string }) => req.status === 'APPROVED'
         );
-        setRequests(
-          approvedRequests.map((req: Request) => ({
-            ...req,
-            isProcessing: false,
-          }))
-        );
+        setRequests(approvedRequests);
       }
     } catch (err) {
       console.error('Error fetching requests:', err);
@@ -66,12 +56,8 @@ export default function FacultyIssued() {
     }
   };
 
-  const handleMarkAsIssued = async (requestId: string, index: number) => {
+  const handleMarkAsIssued = async (requestId: string) => {
     try {
-      const updatedRequests = [...requests];
-      updatedRequests[index].isProcessing = true;
-      setRequests(updatedRequests);
-
       const res = await fetch(`/api/requests/${requestId}/issue`, {
         method: 'POST',
         headers: {
@@ -85,171 +71,95 @@ export default function FacultyIssued() {
         throw new Error(data.error || 'Failed to mark request as issued');
       }
 
-      // Remove issued request from list
-      setRequests(requests.filter((_, i) => i !== index));
+      setRequests(requests.filter((r) => r.id !== requestId));
       alert('Request marked as issued successfully!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process');
-      const updatedRequests = [...requests];
-      updatedRequests[index].isProcessing = false;
-      setRequests(updatedRequests);
     }
   };
 
   if (loading) {
     return (
-      <PageTransition>
-        <div className="flex items-center justify-center py-12">
-          <Loader className="animate-spin" size={32} />
+      <div className="animate-page-enter">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 16px' }}>
+          <Loader size={32} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
-      </PageTransition>
+      </div>
     );
   }
 
   return (
-    <PageTransition>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">
-            Issue Components 📦
-          </h1>
-          <p className="text-[var(--text-secondary)]">
-            Manage approved component requests and mark them as physically issued
-          </p>
-        </div>
-
+    <div className="animate-page-enter">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {/* Error Message */}
         {error && (
-          <div className="p-4 rounded-lg bg-[var(--danger)] bg-opacity-10 border border-[var(--danger)] flex gap-3 items-start">
-            <AlertCircle size={20} className="text-[var(--danger)] flex-shrink-0 mt-0.5" />
-            <p className="text-[var(--danger)] text-sm">{error}</p>
+          <div
+            style={{
+              padding: '16px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--danger-light)',
+              border: '1px solid var(--danger)',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start',
+            }}
+          >
+            <AlertCircle size={20} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
+            <p style={{ color: 'var(--danger)', fontSize: '13px' }}>{error}</p>
           </div>
         )}
 
         {/* Requests List */}
         {requests.length === 0 ? (
-          <div className="p-12 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] border-dashed text-center space-y-4">
-            <CheckCircle size={48} className="mx-auto text-[var(--success)]" />
+          <div
+            style={{
+              padding: '48px 16px',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px dashed var(--border)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+            }}
+          >
+            <AlertCircle size={48} style={{ color: 'var(--text-secondary)' }} />
             <div>
-              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
                 All requests issued
               </h2>
-              <p className="text-[var(--text-secondary)]">
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                 No pending requests waiting to be physically issued
               </p>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {requests.map((request, index) => (
-              <div
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {requests.map((request) => (
+              <RequestCard
                 key={request.id}
-                className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] space-y-6"
-              >
-                {/* Student Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs text-[var(--text-secondary)] mb-1">Student Name</p>
-                    <p className="text-lg font-semibold text-[var(--text-primary)]">
-                      {request.studentName}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-secondary)] mb-1">Roll Number</p>
-                    <p className="text-lg font-semibold text-[var(--text-primary)]">
-                      {request.studentRoll}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-secondary)] mb-1">Department</p>
-                    <p className="text-lg font-semibold text-[var(--text-primary)]">
-                      {request.studentDept}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-secondary)] mb-1">Approved</p>
-                    <p className="text-sm text-[var(--text-primary)]">
-                      {getRelativeTime(new Date(request.approvedAt))}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Purpose */}
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[var(--text-secondary)]">Purpose</p>
-                  <p className="text-[var(--text-primary)] bg-[var(--bg-base)] p-3 rounded-lg">
-                    {request.purpose}
-                  </p>
-                </div>
-
-                {/* Components Table */}
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-[var(--text-secondary)]">
-                    Components Ready for Issue
-                  </p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-[var(--bg-elevated)] border-b border-[var(--border)]">
-                        <tr>
-                          <th className="px-4 py-2 text-left font-medium text-[var(--text-primary)]">
-                            Component
-                          </th>
-                          <th className="px-4 py-2 text-left font-medium text-[var(--text-primary)]">
-                            Category
-                          </th>
-                          <th className="px-4 py-2 text-center font-medium text-[var(--text-primary)]">
-                            Quantity
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[var(--border)]">
-                        {request.items?.map((item, i) => (
-                          <tr key={i} className="hover:bg-[var(--bg-elevated)]">
-                            <td className="px-4 py-2 font-medium text-[var(--text-primary)]">
-                              {item.name}
-                            </td>
-                            <td className="px-4 py-2 text-[var(--text-secondary)]">
-                              {item.category}
-                            </td>
-                            <td className="px-4 py-2 text-center font-semibold text-[var(--accent)]">
-                              {item.quantity}x
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <div className="pt-6 border-t border-[var(--border)]">
-                  <button
-                    onClick={() => handleMarkAsIssued(request.id, index)}
-                    disabled={request.isProcessing}
-                    className="w-full px-4 py-3 bg-[var(--success)] text-white rounded-lg hover:bg-opacity-90 transition-all font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {request.isProcessing ? (
-                      <>
-                        <Loader size={18} className="animate-spin" />
-                        Marking as Issued...
-                      </>
-                    ) : (
-                      <>
-                        <Send size={18} />
-                        Mark as Issued
-                      </>
-                    )}
-                  </button>
-                  <p className="text-xs text-[var(--text-secondary)] mt-3 text-center">
-                    This action will update inventory and notify the student of the due date
-                  </p>
-                </div>
-              </div>
+                request={{
+                  id: request.id,
+                  status: request.status,
+                  purpose: request.purpose,
+                  requestedAt: new Date(request.requestedAt),
+                  approvedAt: new Date(request.approvedAt),
+                }}
+                student={{
+                  name: request.studentName,
+                  email: request.studentEmail || '',
+                  rollNumber: request.studentRoll,
+                  department: request.studentDept,
+                }}
+                items={request.items || []}
+                showActions="issue"
+                onIssue={handleMarkAsIssued}
+              />
             ))}
           </div>
         )}
       </div>
-    </PageTransition>
+    </div>
   );
 }

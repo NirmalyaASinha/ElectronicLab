@@ -1,18 +1,12 @@
 {
-  "/api/faculty/route": "app/api/faculty/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/requests/route": "app/api/requests/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/api/requests/[id]/route": "app/api/requests/[id]/route.js",
-  "/api/requests/[id]/issue/route": "app/api/requests/[id]/issue/route.js",
-  "/api/components/route": "app/api/components/route.js",
-  "/(dashboard)/student/browse/page": "app/(dashboard)/student/browse/page.js",
-  "/(dashboard)/student/request/page": "app/(dashboard)/student/request/page.js",
-  "/(dashboard)/student/request/proceed/page": "app/(dashboard)/student/request/proceed/page.js",
-  "/(dashboard)/faculty/page": "app/(dashboard)/faculty/page.js",
+  "/(dashboard)/student/requests/page": "app/(dashboard)/student/requests/page.js",
   "/(dashboard)/faculty/approvals/page": "app/(dashboard)/faculty/approvals/page.js",
-  "/(dashboard)/faculty/issued/page": "app/(dashboard)/faculty/issued/page.js",
-  "/(dashboard)/faculty/returns/page": "app/(dashboard)/faculty/returns/page.js",
   "/(dashboard)/student/page": "app/(dashboard)/student/page.js",
-  "/(dashboard)/student/requests/page": "app/(dashboard)/student/requests/page.js"
+  "/(dashboard)/faculty/page": "app/(dashboard)/faculty/page.js",
+  "/(dashboard)/student/fines/page": "app/(dashboard)/student/fines/page.js",
+  "/(dashboard)/faculty/returns/page": "app/(dashboard)/faculty/returns/page.js"
 }

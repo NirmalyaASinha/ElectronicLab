@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PageTransition } from '@/components/dashboard/PageTransition';
-import { CheckCircle, AlertCircle, Loader, TrendingDown, Calendar } from 'lucide-react';
-import { getRelativeTime, getDaysOverdue } from '@/lib/date-utils';
+import { Loader, AlertCircle } from 'lucide-react';
+import { getDaysOverdue } from '@/lib/date-utils';
 
 interface Component {
   id: string;
@@ -20,6 +19,7 @@ interface Request {
   studentName: string;
   studentRoll: string;
   studentDept: string;
+  studentEmail?: string;
   status: string;
   purpose: string;
   issuedAt: string;
@@ -28,8 +28,7 @@ interface Request {
 }
 
 interface RequestWithUI extends Request {
-  isProcessing: boolean;
-  selectedItems: { [key: number]: number }; // Track returned quantities
+  selectedItems: { [key: number]: number };
 }
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +37,7 @@ export default function ProcessReturns() {
   const [requests, setRequests] = useState<RequestWithUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchIssuedRequests();
@@ -51,14 +51,12 @@ export default function ProcessReturns() {
       const data = await res.json();
 
       if (data.success && data.data) {
-        // Filter only ISSUED requests (not yet returned)
         const issuedRequests = data.data.filter(
           (req: { status: string }) => req.status === 'ISSUED'
         );
         setRequests(
           issuedRequests.map((req: Request) => ({
             ...req,
-            isProcessing: false,
             selectedItems: {},
           }))
         );
@@ -77,18 +75,14 @@ export default function ProcessReturns() {
     setRequests(updatedRequests);
   };
 
-  const handleMarkAsReturned = async (requestId: string, index: number) => {
-    const request = requests[index];
+  const handleMarkAsReturned = async (requestId: string, requestIndex: number) => {
+    const request = requests[requestIndex];
     const selectedItems = request.selectedItems;
 
-    // Prepare returned items - only include valid items with quantities
-    const validItems = request.items.filter(item => item && item.name);
+    const validItems = request.items.filter((item) => item && item.name);
     const returnedItems = validItems
       .map((item) => {
-        // Find the original index in the full items array
-        const originalIndex = request.items.findIndex(
-          (i) => i && i.id === item.id
-        );
+        const originalIndex = request.items.findIndex((i) => i && i.id === item.id);
         return {
           id: item.id,
           componentId: item.componentId,
@@ -103,9 +97,7 @@ export default function ProcessReturns() {
     }
 
     try {
-      const updatedRequests = [...requests];
-      updatedRequests[index].isProcessing = true;
-      setRequests(updatedRequests);
+      setProcessingId(requestId);
 
       const res = await fetch(`/api/requests/${requestId}/return`, {
         method: 'POST',
@@ -123,238 +115,242 @@ export default function ProcessReturns() {
         throw new Error(data.error || 'Failed to process return');
       }
 
-      // Remove processed request from list or update it
-      setRequests(requests.filter((_, i) => i !== index));
+      setRequests(requests.filter((_, i) => i !== requestIndex));
       alert('Items marked as returned successfully!');
-      fetchIssuedRequests(); // Refresh the list
+      fetchIssuedRequests();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process return');
-      const updatedRequests = [...requests];
-      updatedRequests[index].isProcessing = false;
-      setRequests(updatedRequests);
+    } finally {
+      setProcessingId(null);
     }
   };
 
   if (loading) {
     return (
-      <PageTransition>
-        <div className="flex items-center justify-center py-12">
-          <Loader className="animate-spin" size={32} />
+      <div className="animate-page-enter">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 16px' }}>
+          <Loader size={32} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
-      </PageTransition>
+      </div>
     );
   }
 
   return (
-    <PageTransition>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">
-            Process Returns ↩️
-          </h1>
-          <p className="text-[var(--text-secondary)]">
-            Manage component returns from issued requests
-          </p>
-        </div>
-
+    <div className="animate-page-enter">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {/* Error Message */}
         {error && (
-          <div className="p-4 rounded-lg bg-red-500/10 border border-red-500 flex gap-3 items-start">
-            <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-red-500 text-sm">{error}</p>
+          <div
+            style={{
+              padding: '16px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--danger-light)',
+              border: '1px solid var(--danger)',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start',
+            }}
+          >
+            <AlertCircle size={20} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
+            <p style={{ color: 'var(--danger)', fontSize: '13px' }}>{error}</p>
           </div>
         )}
 
-        {/* Requests List */}
+        {/* Requests List or Empty State */}
         {requests.length === 0 ? (
-          <div className="p-12 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] border-dashed text-center space-y-4">
-            <CheckCircle size={48} className="mx-auto text-green-500" />
+          <div
+            style={{
+              padding: '48px 16px',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px dashed var(--border)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+            }}
+          >
+            <AlertCircle size={48} style={{ color: 'var(--text-secondary)' }} />
             <div>
-              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
                 All components returned
               </h2>
-              <p className="text-[var(--text-secondary)]">
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                 No issued components pending return
               </p>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {requests.map((request, index) => {
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {requests.map((request, requestIndex) => {
               const daysOverdue = request.dueAt ? getDaysOverdue(new Date(request.dueAt)) : 0;
               const isOverdue = daysOverdue > 0;
+              const validItems = request.items.filter((item) => item && item.name);
 
               return (
                 <div
                   key={request.id}
-                  className={`rounded-lg border overflow-hidden ${
-                    isOverdue
-                      ? 'bg-orange-500/5 border-orange-500'
-                      : 'bg-[var(--bg-surface)] border-[var(--border)]'
-                  }`}
+                  style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-lg)',
+                    overflow: 'hidden',
+                    boxShadow: 'var(--shadow-sm)',
+                    ...(isOverdue && { borderLeft: '3px solid var(--danger)' }),
+                  }}
                 >
-                  {/* Student Info Header */}
-                  <div className="bg-[var(--bg-elevated)] border-b border-[var(--border)] p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Header */}
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-elevated)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', fontSize: '13px' }}>
                       <div>
-                        <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">
-                          Student Name
-                        </p>
-                        <p className="text-lg font-bold text-[var(--text-primary)]">
+                        <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Student
+                        </div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                           {request.studentName}
-                        </p>
+                        </div>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">
-                          Roll Number
-                        </p>
-                        <p className="text-lg font-semibold text-[var(--accent)]">
+                        <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Roll
+                        </div>
+                        <div style={{ color: 'var(--accent)', fontWeight: 600 }}>
                           {request.studentRoll}
-                        </p>
+                        </div>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">
+                        <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
                           Department
-                        </p>
-                        <p className="text-sm text-[var(--text-primary)]">
+                        </div>
+                        <div style={{ color: 'var(--text-primary)' }}>
                           {request.studentDept}
-                        </p>
+                        </div>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">
-                          Issued Date
-                        </p>
-                        <p className="text-sm text-[var(--text-primary)]">
-                          {request.issuedAt
-                            ? new Date(request.issuedAt).toLocaleDateString()
-                            : 'N/A'}
-                        </p>
+                        <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Due Date
+                        </div>
+                        <div style={{ color: 'var(--text-primary)' }}>
+                          {request.dueAt ? new Date(request.dueAt).toLocaleDateString('en-IN') : 'N/A'}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Main Content */}
-                  <div className="p-6 space-y-6">
-                    {/* Due Date and Status */}
-                    <div className="flex items-start gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={18} className="text-[var(--accent)]" />
-                          <span className="text-sm font-semibold text-[var(--text-secondary)]">
-                            Due Date
-                          </span>
+                  {/* Content */}
+                  <div style={{ padding: '20px' }}>
+                    {/* Overdue Alert */}
+                    {isOverdue && (
+                      <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--danger-light)', border: '1px solid var(--danger)', marginBottom: '16px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--danger)', textTransform: 'uppercase', marginBottom: '2px' }}>
+                          Overdue
                         </div>
-                        <p className="text-lg font-bold text-[var(--text-primary)] mt-1">
-                          {request.dueAt
-                            ? new Date(request.dueAt).toLocaleDateString()
-                            : 'N/A'}
+                        <p style={{ fontSize: '13px', color: 'var(--danger)' }}>
+                          {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue
                         </p>
                       </div>
-                      {isOverdue && (
-                        <div className="bg-orange-500/10 border border-orange-500 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <TrendingDown size={18} className="text-orange-500" />
-                            <span className="font-semibold text-orange-600">OVERDUE</span>
-                          </div>
-                          <p className="text-sm text-orange-600">
-                            {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                    )}
 
                     {/* Purpose */}
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--text-secondary)] mb-2">
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
                         Purpose
-                      </p>
-                      <p className="text-sm text-[var(--text-primary)] bg-[var(--bg-base)] p-3 rounded-lg border border-[var(--border)]">
+                      </div>
+                      <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-muted)', border: '1px solid var(--border)', fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                         {request.purpose}
-                      </p>
+                      </div>
                     </div>
 
-                    {/* Components - Return Form */}
+                    {/* Items */}
                     <div>
-                      {(() => {
-                        const validItems = request.items.filter(item => item && item.name);
-                        return (
-                          <>
-                            <p className="text-sm font-semibold text-[var(--text-secondary)] mb-3">
-                              Return Items ({validItems.length})
-                            </p>
-                            <div className="space-y-3">
-                              {validItems.map((item, validIndex) => {
-                                const originalIndex = request.items.findIndex(
-                                  (i) => i && i.id === item.id
-                                );
-                                return (
-                                  <div
-                                    key={item.id || validIndex}
-                                    className="flex items-center justify-between p-4 bg-[var(--bg-base)] rounded-lg border border-[var(--border)]"
-                                  >
-                                    <div className="flex-1">
-                                      <p className="font-semibold text-[var(--text-primary)]">
-                                        {item.name}
-                                      </p>
-                                      <p className="text-xs text-[var(--text-secondary)]">
-                                        {item.category}
-                                      </p>
-                                      <p className="text-sm text-[var(--text-secondary)] mt-1">
-                                        Issued: <span className="font-semibold">{item.quantity}x</span>
-                                      </p>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                      <label className="text-sm font-medium text-[var(--text-secondary)]">
-                                        Return Qty:
-                                      </label>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max={item.quantity}
-                                        value={
-                                          request.selectedItems[originalIndex] || 0
-                                        }
-                                        onChange={(e) =>
-                                          handleQuantityChange(
-                                            index,
-                                            originalIndex,
-                                            parseInt(e.target.value) || 0
-                                          )
-                                        }
-                                        className="w-16 px-2 py-2 bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] text-sm"
-                                      />
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                      <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px' }}>
+                        Return Items ({validItems.length})
+                      </div>
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        {validItems.map((item, validIndex) => {
+                          const originalIndex = request.items.findIndex((i) => i && i.id === item.id);
+                          return (
+                            <div
+                              key={item.id || validIndex}
+                              style={{
+                                padding: '12px',
+                                borderRadius: 'var(--radius-sm)',
+                                backgroundColor: 'var(--bg-muted)',
+                                border: '1px solid var(--border)',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: '12px',
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                  {item.name}
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                  {item.category} • Issued: <span style={{ fontWeight: 600 }}>{item.quantity}</span>x
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                                  Return:
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={item.quantity}
+                                  value={request.selectedItems[originalIndex] || 0}
+                                  onChange={(e) =>
+                                    handleQuantityChange(requestIndex, originalIndex, parseInt(e.target.value) || 0)
+                                  }
+                                  style={{
+                                    width: '60px',
+                                    padding: '6px 8px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-surface)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    textAlign: 'center',
+                                  }}
+                                />
+                              </div>
                             </div>
-                          </>
-                        );
-                      })()}
+                          );
+                        })}
+                      </div>
                     </div>
+                  </div>
 
-                    {/* Action Button */}
-                    <div className="pt-4 border-t border-[var(--border)]">
-                      <button
-                        onClick={() => handleMarkAsReturned(request.id, index)}
-                        disabled={request.isProcessing}
-                        className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {request.isProcessing ? (
-                          <>
-                            <Loader size={18} className="animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle size={18} />
-                            Mark Items as Returned
-                          </>
-                        )}
-                      </button>
-                    </div>
+                  {/* Action Button */}
+                  <div
+                    style={{
+                      padding: '14px 20px',
+                      borderTop: '1px solid var(--border)',
+                      backgroundColor: 'var(--bg-elevated)',
+                    }}
+                  >
+                    <button
+                      onClick={() => handleMarkAsReturned(request.id, requestIndex)}
+                      disabled={processingId === request.id}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: 'none',
+                        backgroundColor: 'var(--success)',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        cursor: processingId === request.id ? 'not-allowed' : 'pointer',
+                        opacity: processingId === request.id ? 0.6 : 1,
+                        transition: 'opacity 200ms ease',
+                      }}
+                    >
+                      {processingId === request.id ? 'Processing...' : 'Mark Items as Returned'}
+                    </button>
                   </div>
                 </div>
               );
@@ -362,6 +358,6 @@ export default function ProcessReturns() {
           </div>
         )}
       </div>
-    </PageTransition>
+    </div>
   );
 }
