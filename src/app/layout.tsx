@@ -4,7 +4,7 @@ import { AppwritePing } from '@/components/AppwritePing';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ElecTronic Lab Management',
+  title: 'E-Lab',
   description: 'University Electronics Lab Component Management System',
 };
 

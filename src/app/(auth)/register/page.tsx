@@ -184,7 +184,7 @@ export default function RegisterPage() {
             fontSize: '0.875rem',
           }}
         >
-          Join ElecTronic Lab Management System
+          Join E-Lab
         </p>
 
         <form onSubmit={handleRegister}>

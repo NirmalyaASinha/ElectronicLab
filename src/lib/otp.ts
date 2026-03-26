@@ -46,10 +46,10 @@ export async function sendOTPEmail(email: string): Promise<{ success: boolean; e
     const result = await resend.emails.send({
       from: fromEmail,
       to: email,
-      subject: 'Your ElecTronic Lab OTP Code',
+      subject: 'Your E-Lab OTP Code',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1a365d;">ElecTronic Lab - Verification Code</h2>
+          <h2 style="color: #1a365d;">E-Lab - Verification Code</h2>
           <p style="color: #4a5568; font-size: 16px;">
             Your one-time verification code is:
           </p>
