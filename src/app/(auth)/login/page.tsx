@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { LoginSchema } from '@/lib/validations';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -80,6 +81,32 @@ export default function LoginPage() {
           border: '1px solid var(--border)',
         }}
       >
+        {/* Logos */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '1rem',
+            marginBottom: '1.5rem',
+          }}
+        >
+          <Image
+            src="/RRU.png"
+            alt="RRU Logo"
+            width={40}
+            height={40}
+            style={{ objectFit: 'contain' }}
+          />
+          <Image
+            src="/SASET.png"
+            alt="SASET Logo"
+            width={40}
+            height={40}
+            style={{ objectFit: 'contain' }}
+          />
+        </div>
+
         <h1
           style={{
             fontSize: '1.875rem',

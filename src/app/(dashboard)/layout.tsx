@@ -3,6 +3,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 export default function DashboardLayout({
@@ -73,20 +74,41 @@ export default function DashboardLayout({
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: sidebarOpen ? 'space-between' : 'center',
             marginBottom: '2rem',
+            gap: sidebarOpen ? '0.75rem' : '0',
           }}
         >
+          {sidebarOpen && (
+            <Image
+              src="/RRU.png"
+              alt="RRU Logo"
+              width={40}
+              height={40}
+              style={{ objectFit: 'contain' }}
+            />
+          )}
           {sidebarOpen && (
             <h2
               style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
                 color: 'var(--text-primary)',
+                fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
               }}
             >
-              ElecTronic
+              ElectraLab
             </h2>
+          )}
+          {sidebarOpen && (
+            <Image
+              src="/SASET.png"
+              alt="SASET Logo"
+              width={40}
+              height={40}
+              style={{ objectFit: 'contain' }}
+            />
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
