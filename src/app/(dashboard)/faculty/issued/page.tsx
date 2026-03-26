@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
 import CompactRequestCard from '@/components/shared/CompactRequestCard';
+import DetailSheet from '@/components/shared/DetailSheet';
+import RequestDetailCard from '@/components/shared/RequestDetailCard';
 
 interface Component {
   id: string;
@@ -32,6 +34,8 @@ export default function FacultyIssued() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
 
   useEffect(() => {
     fetchApprovedRequests();
@@ -60,6 +64,7 @@ export default function FacultyIssued() {
 
   const handleMarkAsIssued = async (requestId: string) => {
     try {
+      setProcessingId(requestId);
       const res = await fetch(`/api/requests/${requestId}/issue`, {
         method: 'POST',
         headers: {
@@ -73,10 +78,36 @@ export default function FacultyIssued() {
         throw new Error(data.error || 'Failed to mark request as issued');
       }
 
-      setRequests(requests.filter((r) => r.id !== requestId));
-      alert('Request marked as issued successfully!');
+      setRequests((current) => current.filter((r) => r.id !== requestId));
+      setSelectedRequest((current) => (current?.id === requestId ? null : current));
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        backgroundColor: #10b981;
+        color: white;
+        borderRadius: 6px;
+        fontSize: 13px;
+        fontWeight: 500;
+        boxShadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        zIndex: 9999;
+      `;
+      notification.textContent = '✓ Request marked as issued successfully!';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process');
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -146,11 +177,29 @@ export default function FacultyIssued() {
                   returnedAt: undefined,
                 }}
                 mode="view"
+                isProcessing={processingId === request.id}
+                onViewDetails={() => setSelectedRequest(request)}
+                onSubmit={() => handleMarkAsIssued(request.id)}
               />
             ))}
           </div>
         )}
       </div>
+
+      <DetailSheet
+        open={selectedRequest !== null}
+        onClose={() => setSelectedRequest(null)}
+        title="Issued Request"
+        subtitle={selectedRequest ? `${selectedRequest.studentName} • ${selectedRequest.studentRoll}` : undefined}
+      >
+        {selectedRequest ? (
+          <RequestDetailCard
+            request={selectedRequest}
+            actionMode="issue"
+            onIssue={handleMarkAsIssued}
+          />
+        ) : null}
+      </DetailSheet>
     </div>
   );
 }

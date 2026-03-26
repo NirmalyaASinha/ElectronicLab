@@ -28,13 +28,45 @@ interface ComponentData {
   }>;
 }
 
+interface RequestItem {
+  id: string;
+  componentId: string;
+  name: string;
+  category: string;
+  quantity: number;
+}
+
+interface ComponentApiRecord {
+  id: string;
+  name: string;
+  category: string;
+  description?: string | null;
+  quantityTotal: number;
+  quantityAvailable: number;
+}
+
+interface RequestApiRecord {
+  id: string;
+  studentName: string;
+  studentRoll: string;
+  status: string;
+  issuedAt?: string;
+  dueAt?: string;
+  returnedAt?: string;
+  items?: RequestItem[];
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+}
+
 export const dynamic = 'force-dynamic';
 
 export default function ComponentsInventory() {
   const [components, setComponents] = useState<ComponentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [expandedComponent, setExpandedComponent] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [selectedComponent, setSelectedComponent] = useState<ComponentData | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,24 +89,28 @@ export default function ComponentsInventory() {
       setLoading(true);
       setError('');
       const res = await fetch('/api/components');
-      const data = await res.json();
+      const data = (await res.json()) as ApiResponse<ComponentApiRecord[]>;
 
       if (data.success && data.data) {
+        const requestsRes = await fetch('/api/requests');
+        const requestsData = (await requestsRes.json()) as ApiResponse<RequestApiRecord[]>;
+
+        if (!requestsData.success) {
+          setError('Failed to load request history');
+          return;
+        }
+
+        const requests = requestsData.data || [];
+
         // Enrich components with issue data
         const enrichedComponents = await Promise.all(
-          data.data.map(async (comp: any) => {
-            const requestsRes = await fetch('/api/requests');
-            const requestsData = await requestsRes.json();
+          data.data.map(async (comp): Promise<ComponentData> => {
+            const currentIssues: ComponentData['currentIssues'] = [];
+            const pastIssues: ComponentData['pastIssues'] = [];
 
-            if (!requestsData.success) return comp;
-
-            const requests = requestsData.data || [];
-            const currentIssues: any[] = [];
-            const pastIssues: any[] = [];
-
-            requests.forEach((req: any) => {
+            requests.forEach((req) => {
               if (!req.items) return;
-              req.items.forEach((item: any) => {
+              req.items.forEach((item) => {
                 if (item.componentId === comp.id) {
                   if (req.status === 'ISSUED') {
                     currentIssues.push({
@@ -82,8 +118,8 @@ export default function ComponentsInventory() {
                       studentName: req.studentName,
                       studentRoll: req.studentRoll,
                       quantity: item.quantity,
-                      issuedAt: req.issuedAt,
-                      dueAt: req.dueAt,
+                      issuedAt: req.issuedAt ?? '',
+                      dueAt: req.dueAt ?? '',
                     });
                   } else if (req.status === 'RETURNED') {
                     pastIssues.push({
@@ -91,8 +127,8 @@ export default function ComponentsInventory() {
                       studentName: req.studentName,
                       studentRoll: req.studentRoll,
                       quantity: item.quantity,
-                      issuedAt: req.issuedAt,
-                      returnedAt: req.returnedAt,
+                      issuedAt: req.issuedAt ?? '',
+                      returnedAt: req.returnedAt ?? '',
                     });
                   }
                 }
@@ -101,6 +137,7 @@ export default function ComponentsInventory() {
 
             return {
               ...comp,
+              description: comp.description ?? undefined,
               currentIssues,
               pastIssues,
             };

@@ -23,8 +23,6 @@ const config: Record<string, { label: string; bg: string; color: string; dot: bo
 
 export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   const cfg = config[status] || config.PENDING
-  const paddingClass = size === 'sm' ? 'px-2 py-0.5' : 'px-2.5 py-1'
-  const sizeClass = size === 'sm' ? 'text-xs' : 'text-sm'
   const dotSize = size === 'sm' ? '4px' : '6px'
 
   return (

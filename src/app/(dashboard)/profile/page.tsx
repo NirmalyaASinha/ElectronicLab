@@ -754,11 +754,13 @@ export default function ProfilePage() {
                 fontWeight: 500,
               }}
             >
-              {new Date(userData.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
+              {userData.createdAt
+                ? new Date(userData.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                : 'N/A'}
             </p>
           </div>
         </div>

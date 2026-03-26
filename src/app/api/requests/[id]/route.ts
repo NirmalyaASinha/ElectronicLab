@@ -10,7 +10,7 @@ import { eq } from 'drizzle-orm';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -18,7 +18,7 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
 
-    const requestId = params.id;
+    const { id: requestId } = await params;
     const body = await req.json();
     const { action, rejectionReason } = body;
 

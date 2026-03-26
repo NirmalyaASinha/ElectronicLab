@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { AlertCircle, Loader } from 'lucide-react';
-import StatusBadge from '@/components/ui/StatusBadge';
 
 interface Fine {
   id: string;

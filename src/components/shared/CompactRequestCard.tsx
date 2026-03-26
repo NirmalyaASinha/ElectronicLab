@@ -33,6 +33,7 @@ interface CompactRequestCardProps {
   onApprove?: () => void;
   onReject?: () => void;
   isProcessing?: boolean;
+  onViewDetails?: () => void;
 }
 
 export default function CompactRequestCard({
@@ -45,12 +46,16 @@ export default function CompactRequestCard({
   onApprove,
   onReject,
   isProcessing = false,
+  onViewDetails,
 }: CompactRequestCardProps) {
   const [expandedModal, setExpandedModal] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
   const validItems = request.items.filter((item) => item && item.name);
 
   const handleExpandModal = () => {
+    if (onViewDetails) {
+      onViewDetails();
+      return;
+    }
     setExpandedModal(true);
     onExpandChange?.(true);
   };
@@ -71,7 +76,7 @@ export default function CompactRequestCard({
           overflow: 'hidden',
           boxShadow: 'var(--shadow-sm)',
           display: 'grid',
-          gridTemplateRows: mode === 'approvals' ? '1fr auto' : '1fr',
+          gridTemplateRows: (mode === 'approvals' || mode === 'view') ? '1fr auto' : '1fr',
           gap: '0',
         }}
       >
@@ -200,7 +205,6 @@ export default function CompactRequestCard({
             }}
           >
             {validItems.map((item, validIndex) => {
-              const originalIndex = request.items.findIndex((i) => i && i.id === item.id);
               return (
                 <div
                   key={item.id || validIndex}
@@ -258,8 +262,8 @@ export default function CompactRequestCard({
         </div>
         </div>
 
-        {/* Footer Actions (for approvals mode) */}
-        {mode === 'approvals' && (
+        {/* Footer Actions (for approvals and issued mode) */}
+        {(mode === 'approvals' || mode === 'view') && (
           <div
             style={{
               padding: '16px 20px',
@@ -270,50 +274,74 @@ export default function CompactRequestCard({
               justifyContent: 'flex-end',
             }}
           >
-            <button
-              onClick={() => onReject?.()}
-              disabled={isProcessing}
-              style={{
-                padding: '10px 16px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--danger)',
-                backgroundColor: 'transparent',
-                color: 'var(--danger)',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                opacity: isProcessing ? 0.6 : 1,
-                transition: 'all 200ms ease',
-              }}
-              onMouseEnter={(e) => {
-                if (!isProcessing) {
-                  e.currentTarget.style.backgroundColor = 'var(--danger-light)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              Reject
-            </button>
-            <button
-              onClick={() => onApprove?.()}
-              disabled={isProcessing}
-              style={{
-                padding: '10px 16px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                backgroundColor: 'var(--success)',
-                color: 'white',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                opacity: isProcessing ? 0.6 : 1,
-                transition: 'opacity 200ms ease',
-              }}
-            >
-              {isProcessing ? 'Processing...' : 'Approve'}
-            </button>
+            {mode === 'approvals' && (
+              <>
+                <button
+                  onClick={() => onReject?.()}
+                  disabled={isProcessing}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--danger)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--danger)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: isProcessing ? 'not-allowed' : 'pointer',
+                    opacity: isProcessing ? 0.6 : 1,
+                    transition: 'all 200ms ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isProcessing) {
+                      e.currentTarget.style.backgroundColor = 'var(--danger-light)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => onApprove?.()}
+                  disabled={isProcessing}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    backgroundColor: 'var(--success)',
+                    color: 'white',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: isProcessing ? 'not-allowed' : 'pointer',
+                    opacity: isProcessing ? 0.6 : 1,
+                    transition: 'opacity 200ms ease',
+                  }}
+                >
+                  {isProcessing ? 'Processing...' : 'Approve'}
+                </button>
+              </>
+            )}
+            {mode === 'view' && (
+              <button
+                onClick={() => onSubmit?.()}
+                disabled={isProcessing}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  backgroundColor: 'var(--accent)',
+                  color: 'white',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: isProcessing ? 'not-allowed' : 'pointer',
+                  opacity: isProcessing ? 0.6 : 1,
+                  transition: 'opacity 200ms ease',
+                }}
+              >
+                {isProcessing ? 'Processing...' : 'Issue Component'}
+              </button>
+            )}
           </div>
         )}
       </div>

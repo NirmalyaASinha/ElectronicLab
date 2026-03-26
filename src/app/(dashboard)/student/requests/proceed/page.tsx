@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { PageTransition, StaggerContainer, StaggerItem } from '@/components/dashboard/PageTransition';
@@ -33,15 +33,6 @@ export default function ProceedRequest() {
   const [submitting, setSubmitting] = useState(false);
   const [purpose, setPurpose] = useState('');
 
-  useEffect(() => {
-    if (cartItems.length === 0) {
-      router.push('/student/request');
-      return;
-    }
-    fetchFaculties();
-    prepareComponents();
-  }, [cartItems, router]);
-
   const fetchFaculties = async () => {
     try {
       const res = await fetch('/api/faculty');
@@ -56,7 +47,7 @@ export default function ProceedRequest() {
     }
   };
 
-  const prepareComponents = () => {
+  const prepareComponents = useCallback(() => {
     const prepared = cartItems.map((item) => ({
       componentId: item.id,
       name: item.name,
@@ -64,7 +55,16 @@ export default function ProceedRequest() {
       daysAllowed: 14, // Default 14 days
     }));
     setComponents(prepared);
-  };
+  }, [cartItems]);
+
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      router.push('/student/request');
+      return;
+    }
+    fetchFaculties();
+    prepareComponents();
+  }, [cartItems, prepareComponents, router]);
 
   const updateComponentDeadline = (componentId: string, days: number) => {
     setComponents((prev) =>
@@ -106,15 +106,85 @@ export default function ProceedRequest() {
 
       if (res.ok) {
         clearCart();
-        alert('Request submitted successfully!');
-        router.push('/student/requests');
+        
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 12px 16px;
+          backgroundColor: #10b981;
+          color: white;
+          borderRadius: 6px;
+          fontSize: 13px;
+          fontWeight: 500;
+          boxShadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          zIndex: 9999;
+        `;
+        notification.textContent = '✓ Request submitted successfully!';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.style.opacity = '0';
+          notification.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => notification.remove(), 300);
+        }, 3000);
+        
+        setTimeout(() => router.push('/student/requests'), 500);
       } else {
         const error = await res.json();
-        alert(`Error: ${error.message || 'Failed to submit request'}`);
+        
+        // Show error notification
+        const errorNotif = document.createElement('div');
+        errorNotif.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 12px 16px;
+          backgroundColor: #ef4444;
+          color: white;
+          borderRadius: 6px;
+          fontSize: 13px;
+          fontWeight: 500;
+          boxShadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          zIndex: 9999;
+        `;
+        errorNotif.textContent = `✕ ${error.message || 'Failed to submit request'}`;
+        document.body.appendChild(errorNotif);
+        
+        setTimeout(() => {
+          errorNotif.style.opacity = '0';
+          errorNotif.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => errorNotif.remove(), 300);
+        }, 4000);
       }
     } catch (error) {
       console.error('Error submitting request:', error);
-      alert('An error occurred while submitting your request');
+      
+      // Show error notification
+      const errorNotif = document.createElement('div');
+      errorNotif.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        backgroundColor: #ef4444;
+        color: white;
+        borderRadius: 6px;
+        fontSize: 13px;
+        fontWeight: 500;
+        boxShadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        zIndex: 9999;
+      `;
+      errorNotif.textContent = '✕ An error occurred while submitting your request';
+      document.body.appendChild(errorNotif);
+      
+      setTimeout(() => {
+        errorNotif.style.opacity = '0';
+        errorNotif.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => errorNotif.remove(), 300);
+      }, 4000);
     } finally {
       setSubmitting(false);
     }

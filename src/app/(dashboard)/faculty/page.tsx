@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { PageTransition, StaggerContainer, StaggerItem } from '@/components/dashboard/PageTransition';
 import { LiveClock } from '@/components/dashboard/LiveClock';
 import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
@@ -7,11 +8,7 @@ import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
 export const dynamic = 'force-dynamic';
 
 export default function FacultyHome() {
-  // Example due dates (in production, fetch from your database)
-  const dueDates = [
-    new Date(new Date().getFullYear(), new Date().getMonth(), 10),
-    new Date(new Date().getFullYear(), new Date().getMonth(), 25),
-  ];
+  const router = useRouter();
 
   return (
     <PageTransition>
@@ -31,7 +28,7 @@ export default function FacultyHome() {
             <LiveClock />
           </div>
           <div className="lg:col-span-2">
-            <MiniCalendar dueDates={dueDates} />
+            <MiniCalendar />
           </div>
         </div>
 
@@ -46,6 +43,7 @@ export default function FacultyHome() {
             >
               <StaggerItem>
                 <div
+                  onClick={() => router.push('/faculty/approvals')}
                   className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors duration-300 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between">
@@ -66,6 +64,7 @@ export default function FacultyHome() {
               </StaggerItem>
               <StaggerItem>
                 <div
+                  onClick={() => router.push('/faculty/issued')}
                   className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors duration-300 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between">
@@ -86,6 +85,7 @@ export default function FacultyHome() {
               </StaggerItem>
               <StaggerItem>
                 <div
+                  onClick={() => router.push('/faculty/returns')}
                   className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors duration-300 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { PageTransition, StaggerContainer, StaggerItem } from '@/components/dashboard/PageTransition';
 import { useRequestStore } from '@/store/requestStore';
 import { Search, Plus, Check } from 'lucide-react';
@@ -23,7 +23,6 @@ interface Component {
 export const dynamic = 'force-dynamic';
 
 export default function BrowseComponents() {
-  const router = useRouter();
   const store = useRequestStore();
   const [components, setComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,9 +197,11 @@ export default function BrowseComponents() {
                       {/* Image placeholder */}
                       <div className="w-full h-32 bg-[var(--bg-elevated)] rounded-lg mb-4 flex items-center justify-center group-hover:bg-[var(--accent-glow)] transition-colors">
                         {component.imageUrl ? (
-                          <img
+                          <Image
                             src={component.imageUrl}
                             alt={component.name}
+                            width={160}
+                            height={128}
                             className="w-full h-full object-contain p-2"
                           />
                         ) : (

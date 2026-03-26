@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
 import CompactRequestCard from '@/components/shared/CompactRequestCard';
+import DetailSheet from '@/components/shared/DetailSheet';
+import RequestDetailCard from '@/components/shared/RequestDetailCard';
 
 interface Component {
   id: string;
@@ -35,6 +37,7 @@ export default function StudentRequests() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
 
   useEffect(() => {
     fetchStudentRequests();
@@ -126,11 +129,21 @@ export default function StudentRequests() {
                   items: request.items || [],
                 }}
                 mode="view"
+                onViewDetails={() => setSelectedRequest(request)}
               />
             ))}
           </div>
         )}
       </div>
+
+      <DetailSheet
+        open={selectedRequest !== null}
+        onClose={() => setSelectedRequest(null)}
+        title="Request Details"
+        subtitle={selectedRequest ? `${selectedRequest.status} • ${selectedRequest.studentName}` : undefined}
+      >
+        {selectedRequest ? <RequestDetailCard request={{ ...selectedRequest, items: selectedRequest.items || [] }} /> : null}
+      </DetailSheet>
     </div>
   );
 }

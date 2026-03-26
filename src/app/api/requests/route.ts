@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     // Get all requests (or filtered by student if role is STUDENT)
-    let baseQuery = db
+    const baseQuery = db
       .select({
         id: issueRequests.id,
         studentId: issueRequests.studentId,

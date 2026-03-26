@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
-import { getDaysOverdue } from '@/lib/date-utils';
 import CompactRequestCard from '@/components/shared/CompactRequestCard';
+import DetailSheet from '@/components/shared/DetailSheet';
+import RequestDetailCard from '@/components/shared/RequestDetailCard';
 
 interface Component {
   id: string;
@@ -39,6 +40,7 @@ export default function ProcessReturns() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchIssuedRequests();
@@ -116,8 +118,33 @@ export default function ProcessReturns() {
         throw new Error(data.error || 'Failed to process return');
       }
 
-      setRequests(requests.filter((_, i) => i !== requestIndex));
-      alert('Items marked as returned successfully!');
+      setRequests((current) => current.filter((_, i) => i !== requestIndex));
+      setSelectedRequestId((current) => (current === requestId ? null : current));
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        backgroundColor: #10b981;
+        color: white;
+        borderRadius: 6px;
+        fontSize: 13px;
+        fontWeight: 500;
+        boxShadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        zIndex: 9999;
+      `;
+      notification.textContent = '✓ Items marked as returned successfully!';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+      
       fetchIssuedRequests();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process return');
@@ -186,24 +213,139 @@ export default function ProcessReturns() {
           <div style={{ display: 'grid', gap: '16px' }}>
             {requests.map((request, requestIndex) => {
               return (
-                <CompactRequestCard
-                  key={request.id}
-                  request={{
-                    ...request,
-                    returnedAt: undefined,
-                  }}
-                  mode="returns"
-                  selectedItems={request.selectedItems}
-                  onQuantityChange={(itemIndex, quantity) =>
-                    handleQuantityChange(requestIndex, itemIndex, quantity)
-                  }
-                  onSubmit={() => handleMarkAsReturned(request.id, requestIndex)}
-                  isProcessing={processingId === request.id}
-                />
-              );
-            })}
-          </div>
-        )}
+              <CompactRequestCard
+                key={request.id}
+                request={{
+                  ...request,
+                  returnedAt: undefined,
+                }}
+                mode="returns"
+                selectedItems={request.selectedItems}
+                onQuantityChange={(itemIndex, quantity) =>
+                  handleQuantityChange(requestIndex, itemIndex, quantity)
+                }
+                onSubmit={() => handleMarkAsReturned(request.id, requestIndex)}
+                isProcessing={processingId === request.id}
+                onViewDetails={() => setSelectedRequestId(request.id)}
+              />
+            );
+          })}
+        </div>
+      )}
+
+        <DetailSheet
+          open={selectedRequestId !== null}
+          onClose={() => setSelectedRequestId(null)}
+          title="Return Details"
+          subtitle={
+            selectedRequestId
+              ? (() => {
+                  const request = requests.find((entry) => entry.id === selectedRequestId);
+                  return request ? `${request.studentName} • ${request.studentRoll}` : undefined;
+                })()
+              : undefined
+          }
+        >
+          {selectedRequestId
+            ? (() => {
+                const selectedRequest = requests.find((entry) => entry.id === selectedRequestId);
+
+                if (!selectedRequest) {
+                  return null;
+                }
+
+                const requestIndex = requests.findIndex((entry) => entry.id === selectedRequestId);
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <RequestDetailCard request={selectedRequest} />
+
+                    <div
+                      style={{
+                        padding: '20px',
+                        borderRadius: '16px',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--bg-surface)',
+                      }}
+                    >
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        Return Quantities
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {selectedRequest.items.map((item, itemIndex) => (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '12px',
+                              borderRadius: '12px',
+                              backgroundColor: 'var(--bg-elevated)',
+                              border: '1px solid var(--border)',
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {item.name}
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                {item.category} • Issued {item.quantity} • Returned {item.returnedQty ?? 0}
+                              </div>
+                            </div>
+
+                            <input
+                              type="number"
+                              min="0"
+                              max={Math.max(item.quantity - (item.returnedQty ?? 0), 0)}
+                              value={selectedRequest.selectedItems[itemIndex] || 0}
+                              onChange={(event) =>
+                                handleQuantityChange(
+                                  requestIndex,
+                                  itemIndex,
+                                  parseInt(event.target.value, 10) || 0
+                                )
+                              }
+                              style={{
+                                width: '84px',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-surface)',
+                                color: 'var(--text-primary)',
+                                fontWeight: 600,
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => handleMarkAsReturned(selectedRequest.id, requestIndex)}
+                        disabled={processingId === selectedRequest.id}
+                        style={{
+                          marginTop: '16px',
+                          width: '100%',
+                          padding: '12px 16px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          backgroundColor: 'var(--success)',
+                          color: 'white',
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          cursor: processingId === selectedRequest.id ? 'not-allowed' : 'pointer',
+                          opacity: processingId === selectedRequest.id ? 0.6 : 1,
+                        }}
+                      >
+                        {processingId === selectedRequest.id ? 'Processing...' : 'Mark as Returned'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()
+            : null}
+        </DetailSheet>
       </div>
     </div>
   );

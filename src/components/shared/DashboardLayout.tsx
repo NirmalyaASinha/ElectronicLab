@@ -1,17 +1,17 @@
 'use client'
 
 import { useState, useEffect, ReactNode } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   Home,
   FileText,
   CheckCircle,
   Package,
+  Boxes,
   Users,
   BarChart3,
   ShoppingCart,
   AlertCircle,
-  LogOut,
 } from 'lucide-react'
 import Sidebar from './Sidebar'
 import Header from './Header'
@@ -30,13 +30,11 @@ export default function DashboardLayout({
   children,
   userRole,
   userName,
-  userEmail,
   fineBalance,
   unreadNotifications = 0,
   requestCount = 0,
 }: DashboardLayoutProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [pageTitle, setPageTitle] = useState('Dashboard')
   const [pageSubtitle, setPageSubtitle] = useState('')
@@ -127,6 +125,12 @@ export default function DashboardLayout({
           href: '/faculty/returns',
           icon: <Package {...baseIcon} />,
           isActive: pathname.includes('/returns'),
+        },
+        {
+          label: 'Components',
+          href: '/faculty/components',
+          icon: <Boxes {...baseIcon} />,
+          isActive: pathname.includes('/components'),
         },
       ]
     } else {

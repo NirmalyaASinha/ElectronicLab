@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { LogOut, Menu, X } from 'lucide-react'
+import { LogOut, X } from 'lucide-react'
 import Avatar from '../ui/Avatar'
 
 interface NavItem {

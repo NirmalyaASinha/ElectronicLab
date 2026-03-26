@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
 import CompactRequestCard from '@/components/shared/CompactRequestCard';
+import DetailSheet from '@/components/shared/DetailSheet';
+import RequestDetailCard from '@/components/shared/RequestDetailCard';
 
 interface Component {
   id: string;
@@ -32,6 +34,7 @@ export default function FacultyApprovals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
 
   useEffect(() => {
     fetchPendingRequests();
@@ -75,8 +78,32 @@ export default function FacultyApprovals() {
         throw new Error(data.error || 'Failed to approve request');
       }
 
-      setRequests(requests.filter((r) => r.id !== requestId));
-      alert('Request approved successfully!');
+      setRequests((current) => current.filter((r) => r.id !== requestId));
+      setSelectedRequest((current) => (current?.id === requestId ? null : current));
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        backgroundColor: #10b981;
+        color: white;
+        borderRadius: 6px;
+        fontSize: 13px;
+        fontWeight: 500;
+        boxShadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        zIndex: 9999;
+      `;
+      notification.textContent = '✓ Request approved successfully!';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve');
     } finally {
@@ -101,8 +128,32 @@ export default function FacultyApprovals() {
         throw new Error(data.error || 'Failed to reject request');
       }
 
-      setRequests(requests.filter((r) => r.id !== requestId));
-      alert('Request rejected successfully!');
+      setRequests((current) => current.filter((r) => r.id !== requestId));
+      setSelectedRequest((current) => (current?.id === requestId ? null : current));
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        backgroundColor: #10b981;
+        color: white;
+        borderRadius: 6px;
+        fontSize: 13px;
+        fontWeight: 500;
+        boxShadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        zIndex: 9999;
+      `;
+      notification.textContent = '✓ Request rejected successfully!';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reject');
     } finally {
@@ -177,6 +228,7 @@ export default function FacultyApprovals() {
                 }}
                 mode="approvals"
                 isProcessing={processingId === request.id}
+                onViewDetails={() => setSelectedRequest(request)}
                 onApprove={() => handleApprove(request.id)}
                 onReject={() => {
                   const reason = prompt('Enter reason for rejection (optional):');
@@ -189,6 +241,22 @@ export default function FacultyApprovals() {
           </div>
         )}
       </div>
+
+      <DetailSheet
+        open={selectedRequest !== null}
+        onClose={() => setSelectedRequest(null)}
+        title="Request Details"
+        subtitle={selectedRequest ? `${selectedRequest.studentName} • ${selectedRequest.studentRoll}` : undefined}
+      >
+        {selectedRequest ? (
+          <RequestDetailCard
+            request={selectedRequest}
+            actionMode="approve"
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
+        ) : null}
+      </DetailSheet>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { eq, sql } from 'drizzle-orm';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -20,7 +20,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
 
-    const requestId = params.id;
+    const { id: requestId } = await params;
 
     // Get the request with items
     const request = await db

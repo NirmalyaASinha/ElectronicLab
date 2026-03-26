@@ -10,9 +10,15 @@ import {
 } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
+interface ReturnedItemInput {
+  id: string;
+  componentId: string;
+  quantity: number;
+}
+
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -20,9 +26,9 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
 
-    const requestId = params.id;
+    const { id: requestId } = await params;
     const body = await req.json();
-    const { returnedItems } = body;
+    const { returnedItems } = body as { returnedItems?: ReturnedItemInput[] };
 
     if (!returnedItems || !Array.isArray(returnedItems) || returnedItems.length === 0) {
       return NextResponse.json(
@@ -147,7 +153,7 @@ export async function POST(
 
       // Step 4: Create notification
       const totalReturned = returnedItems.reduce(
-        (sum: number, item: any) => sum + (item.quantity || 0),
+        (sum: number, item: ReturnedItemInput) => sum + (item.quantity || 0),
         0
       );
 

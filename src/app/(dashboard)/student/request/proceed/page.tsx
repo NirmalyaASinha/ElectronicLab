@@ -114,9 +114,32 @@ export default function RequestProceed() {
       // Clear store on success
       store.clearRequest();
 
-      // Show success and redirect
-      alert('Request submitted successfully!');
-      router.push('/student/request');
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        backgroundColor: #10b981;
+        color: white;
+        borderRadius: 6px;
+        fontSize: 13px;
+        fontWeight: 500;
+        boxShadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        zIndex: 9999;
+        animation: slideIn 0.3s ease;
+      `;
+      notification.textContent = 'Request submitted successfully!';
+      document.body.appendChild(notification);
+      
+      // Remove notification after 3 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+      
+      setTimeout(() => router.push('/student/request'), 500);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to submit request';
       console.error('Submit error:', errorMessage);
