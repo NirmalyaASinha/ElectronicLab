@@ -110,7 +110,7 @@ export default function RegisterPage() {
 
       showNotification('Account created! Check your email for verification code.', 'success');
       setTimeout(() => {
-        // Redirect to OTP verification page
+        // Redirect to OTP verification page with email
         router.push(`/verify-otp?email=${encodeURIComponent(data.user.email)}&flow=register`);
       }, 1500);
     } catch {

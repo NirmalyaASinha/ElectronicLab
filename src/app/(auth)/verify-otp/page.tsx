@@ -79,14 +79,29 @@ export default function VerifyOTPPage() {
     e.preventDefault();
     setLoading(true);
 
+    if (!email) {
+      showNotification('Email information missing. Please register again.', 'error');
+      setLoading(false);
+      return;
+    }
+
     if (!otp) {
       showNotification('Please enter the OTP code', 'error');
       setLoading(false);
       return;
     }
 
-    if (otp.length !== 6) {
+    // Trim and clean the OTP
+    const cleanOTP = otp.trim();
+
+    if (cleanOTP.length !== 6) {
       showNotification('OTP must be 6 digits', 'error');
+      setLoading(false);
+      return;
+    }
+
+    if (!/^\d{6}$/.test(cleanOTP)) {
+      showNotification('OTP must contain only numbers', 'error');
       setLoading(false);
       return;
     }
@@ -95,7 +110,7 @@ export default function VerifyOTPPage() {
       const res = await fetch(`/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otpCode: otp, flow }),
+        body: JSON.stringify({ email, otpCode: cleanOTP }),
       });
 
       const data = await res.json();
@@ -153,7 +168,7 @@ export default function VerifyOTPPage() {
       const res = await fetch(`/api/auth/resend-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, flow }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await res.json();

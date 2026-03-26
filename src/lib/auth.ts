@@ -17,14 +17,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
+            console.error('[Auth] Missing email or password');
             return null;
           }
 
+          const email = (credentials.email as string).toLowerCase();
+          console.log('[Auth] Attempting to authorize user with email:', email);
+
           const user = await db.query.users.findFirst({
-            where: eq(users.email, credentials.email as string),
+            where: eq(users.email, email),
           });
 
-          if (!user || !user.isActive) {
+          if (!user) {
+            console.error('[Auth] User not found:', email);
+            return null;
+          }
+
+          if (!user.isActive) {
+            console.error('[Auth] User not active:', email);
             return null;
           }
 
@@ -34,9 +44,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
 
           if (!valid) {
+            console.error('[Auth] Invalid password for user:', email);
             return null;
           }
 
+          console.log('[Auth] User authorized successfully:', email);
           return {
             id: user.id,
             email: user.email,
@@ -46,36 +58,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           };
         } catch (error) {
           console.error('Auth authorize error:', error);
-          return null;
-        }
-      },
-    }),
-    Credentials({
-      id: 'appwrite-otp',
-      credentials: {
-        email: { label: 'Email', type: 'text' },
-        userId: { label: 'User ID', type: 'text' },
-        name: { label: 'Name', type: 'text' },
-        role: { label: 'Role', type: 'text' },
-        department: { label: 'Department', type: 'text' },
-      },
-      async authorize(credentials) {
-        try {
-          if (!credentials?.email) {
-            return null;
-          }
-
-          // User already verified via Appwrite OTP
-          // Just return the user data from credentials
-          return {
-            id: credentials.userId as string,
-            email: credentials.email as string,
-            name: credentials.name as string,
-            role: credentials.role as string,
-            department: credentials.department as string,
-          };
-        } catch (error) {
-          console.error('Appwrite OTP authorize error:', error);
           return null;
         }
       },

@@ -22,8 +22,6 @@ export const users = pgTable('users', {
   employeeId: text('employee_id').unique(),
   fineBalance: integer('fine_balance').default(0).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
-  resetToken: text('reset_token'),
-  resetTokenExpiry: timestamp('reset_token_expiry'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

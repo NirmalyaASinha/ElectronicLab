@@ -23,9 +23,10 @@ export async function POST(req: NextRequest) {
         },
         { status: 200 }
       );
-    } catch (otpError: any) {
+    } catch (otpError) {
+      const err = otpError as Error;
       return NextResponse.json(
-        { error: otpError.message || 'Failed to send OTP' },
+        { error: err.message || 'Failed to send OTP' },
         { status: 500 }
       );
     }

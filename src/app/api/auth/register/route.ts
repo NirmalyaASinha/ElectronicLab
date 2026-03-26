@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { RegisterSchema } from '@/lib/validations';
 import bcrypt from 'bcryptjs';
-import { sendOTP } from '@/lib/appwrite-auth';
+import { sendOTPEmail } from '@/lib/otp-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,14 +33,13 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Send OTP via Appwrite
-    let userId: string;
+    // Send OTP via Resend
     try {
-      userId = await sendOTP(email);
+      await sendOTPEmail(email);
     } catch (otpError) {
       console.error('Failed to send OTP:', otpError);
       return NextResponse.json(
-        { error: 'Failed to send verification OTP. Please try again.' },
+        { error: 'Failed to send verification OTP. Please check your email address and try again.' },
         { status: 500 }
       );
     }
@@ -64,7 +63,6 @@ export async function POST(req: NextRequest) {
       { 
         message: 'OTP sent to your email. Please verify to complete registration.',
         user: newUser[0],
-        appwriteUserId: userId,
         requiresOTPVerification: true,
       },
       { status: 201 }

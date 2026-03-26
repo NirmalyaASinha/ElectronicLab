@@ -1,37 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { LoginSchema } from '@/lib/validations';
-import { sendOTP, verifyOTP } from '@/lib/appwrite-auth';
 import Image from 'next/image';
-import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
-
-  // OTP Flow State
-  const [otpEmail, setOtpEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [userId, setUserId] = useState<string | null>(null);
-  const [otpStep, setOtpStep] = useState<'email' | 'code'>('email');
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
-
-  // Password Flow State
-  const [passwordEmail, setPasswordEmail] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-
-  // Resend timer countdown
-  useEffect(() => {
-    if (resendTimer <= 0) return;
-    const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [resendTimer]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const showNotification = (
     message: string,
@@ -57,24 +37,12 @@ export default function LoginPage() {
     const style = document.createElement('style');
     style.textContent = `
       @keyframes slideIn {
-        from {
-          transform: translateX(400px);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
       @keyframes slideOut {
-        from {
-          transform: translateX(0);
-          opacity: 1;
-        }
-        to {
-          transform: translateX(400px);
-          opacity: 0;
-        }
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(400px); opacity: 0; }
       }
     `;
     document.head.appendChild(style);
@@ -87,145 +55,30 @@ export default function LoginPage() {
     }, 3000);
   };
 
-  // OTP Flow Handlers
-  const handleSendOTP = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setOtpError('');
-    setOtpLoading(true);
+    setError('');
+    setLoading(true);
 
     try {
-      if (!otpEmail) {
-        setOtpError('Please enter your email');
-        setOtpLoading(false);
-        return;
-      }
-
-      const id = await sendOTP(otpEmail);
-      setUserId(id);
-      setOtpStep('code');
-      setResendTimer(60);
-      showNotification('OTP sent to your email!', 'success');
-    } catch (error: any) {
-      setOtpError(error.message || 'Failed to send OTP');
-      showNotification(error.message || 'Failed to send OTP', 'error');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setOtpError('');
-    setOtpLoading(true);
-
-    try {
-      if (!otpCode) {
-        setOtpError('Please enter the OTP code');
-        setOtpLoading(false);
-        return;
-      }
-
-      if (!userId) {
-        setOtpError('Session expired. Please try again.');
-        setOtpLoading(false);
-        return;
-      }
-
-      const isValid = await verifyOTP(userId, otpCode);
-
-      if (!isValid) {
-        setOtpError('Invalid OTP. Please try again.');
-        setOtpLoading(false);
-        return;
-      }
-
-      showNotification('OTP verified! Logging in...', 'success');
-
-      const res = await fetch('/api/auth/appwrite-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: otpEmail }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setOtpError(data.error || 'Login failed');
-        showNotification(data.error || 'Login failed', 'error');
-        setOtpLoading(false);
-        return;
-      }
-
-      // Create NextAuth session using appwrite-otp provider
-      const signInResult = await signIn('appwrite-otp', {
-        email: data.user.email,
-        userId: data.user.id,
-        name: data.user.name,
-        role: data.user.role,
-        department: data.user.department,
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        setOtpError('Failed to create session');
-        showNotification('Failed to create session', 'error');
-        setOtpLoading(false);
-        return;
-      }
-
-      router.push(data.redirectUrl);
-    } catch (error: any) {
-      setOtpError(error.message || 'Failed to verify OTP');
-      showNotification(error.message || 'Failed to verify OTP', 'error');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    setOtpError('');
-    setOtpLoading(true);
-
-    try {
-      const id = await sendOTP(otpEmail);
-      setUserId(id);
-      setResendTimer(60);
-      showNotification('OTP resent to your email!', 'success');
-    } catch (error: any) {
-      setOtpError(error.message || 'Failed to resend OTP');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  // Password Flow Handler
-  const handlePasswordLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError('');
-    setPasswordLoading(true);
-
-    try {
-      const validation = LoginSchema.safeParse({
-        email: passwordEmail,
-        password,
-      });
+      const validation = LoginSchema.safeParse({ email, password });
 
       if (!validation.success) {
-        setPasswordError('Invalid email or password');
-        setPasswordLoading(false);
+        setError('Invalid email or password');
+        setLoading(false);
         return;
       }
 
       const result = await signIn('credentials', {
-        email: passwordEmail,
+        email,
         password,
         redirect: false,
       });
 
       if (!result?.ok || result.error) {
-        setPasswordError('Invalid email or password');
+        setError('Invalid email or password');
         showNotification('Invalid email or password', 'error');
-        setPasswordLoading(false);
+        setLoading(false);
         return;
       }
 
@@ -236,17 +89,17 @@ export default function LoginPage() {
         showNotification('Login successful!', 'success');
         const redirectPath =
           session.user.role === 'STUDENT'
-            ? '/dashboard/student'
+            ? '/student'
             : session.user.role === 'FACULTY'
-              ? '/dashboard/faculty'
-              : '/dashboard/admin';
-        router.push(redirectPath);
+              ? '/faculty'
+              : '/admin';
+        setTimeout(() => router.push(redirectPath), 1000);
       }
-    } catch (error) {
-      setPasswordError('Login failed. Please try again.');
+    } catch (err) {
+      setError('Login failed. Please try again.');
       showNotification('Login failed. Please try again.', 'error');
     } finally {
-      setPasswordLoading(false);
+      setLoading(false);
     }
   };
 
@@ -264,439 +117,173 @@ export default function LoginPage() {
       <div
         style={{
           width: '100%',
-          maxWidth: '950px',
+          maxWidth: '450px',
           backgroundColor: 'var(--bg-surface)',
-          padding: '2rem',
+          padding: '2.5rem',
           borderRadius: 'var(--radius)',
           border: '1px solid var(--border)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
         }}
       >
-        {/* Header */}
+        {/* Logos - Increased Size */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '1rem',
-            marginBottom: '1.5rem',
+            gap: '1.5rem',
+            marginBottom: '2rem',
           }}
         >
           <Image
             src="/RRU.png"
             alt="RRU Logo"
-            width={40}
-            height={40}
+            width={90}
+            height={90}
             style={{ objectFit: 'contain' }}
           />
           <Image
             src="/SASET.png"
             alt="SASET Logo"
-            width={40}
-            height={40}
+            width={90}
+            height={90}
             style={{ objectFit: 'contain' }}
           />
         </div>
 
-        <h1
-          style={{
-            fontSize: '1.875rem',
-            fontWeight: 700,
-            fontFamily: 'var(--font-display)',
-            marginBottom: '0.5rem',
-            color: 'var(--text-primary)',
-            textAlign: 'center',
-          }}
-        >
-          E-Lab
-        </h1>
-        <p
-          style={{
-            color: 'var(--text-secondary)',
-            marginBottom: '2rem',
-            fontSize: '0.875rem',
-            textAlign: 'center',
-          }}
-        >
-          Component Management System
-        </p>
-
-        {/* Two Column Layout */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '2rem',
-          }}
-        >
-          {/* LEFT COLUMN - OTP LOGIN */}
-          <div
+        <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
+          <h1
             style={{
-              paddingRight: '1rem',
-              borderRight: '1px solid var(--border)',
+              fontSize: '2rem',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              marginBottom: '0.5rem',
             }}
           >
-            <h2
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 600,
-                marginBottom: '1.5rem',
-                color: 'var(--text-primary)',
-              }}
-            >
-              Login with OTP
-            </h2>
-
-            <form
-              onSubmit={otpStep === 'email' ? handleSendOTP : handleVerifyOTP}
-              style={{ marginBottom: 0 }}
-            >
-              {otpStep === 'email' ? (
-                <>
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label
-                      htmlFor="otp-email"
-                      style={{
-                        display: 'block',
-                        marginBottom: '0.5rem',
-                        fontWeight: 500,
-                        color: 'var(--text-primary)',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      Email
-                    </label>
-                    <input
-                      id="otp-email"
-                      type="email"
-                      value={otpEmail}
-                      onChange={(e) => setOtpEmail(e.target.value)}
-                      placeholder="you@university.edu"
-                      disabled={otpLoading}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: 'var(--radius)',
-                        border: `1px solid ${
-                          otpError ? 'var(--error)' : 'var(--border)'
-                        }`,
-                        backgroundColor: 'var(--bg-base)',
-                        color: 'var(--text-primary)',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                    {otpError && (
-                      <p
-                        style={{
-                          color: 'var(--error)',
-                          fontSize: '0.75rem',
-                          marginTop: '0.25rem',
-                        }}
-                      >
-                        {otpError}
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={otpLoading}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--accent)',
-                      color: 'white',
-                      borderRadius: 'var(--radius)',
-                      fontWeight: 600,
-                      opacity: otpLoading ? 0.6 : 1,
-                      cursor: otpLoading ? 'not-allowed' : 'pointer',
-                      border: 'none',
-                    }}
-                  >
-                    {otpLoading ? 'Sending...' : 'Send OTP'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <p
-                      style={{
-                        fontSize: '0.875rem',
-                        color: 'var(--text-secondary)',
-                        marginBottom: '0.5rem',
-                      }}
-                    >
-                      OTP sent to {otpEmail}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setOtpStep('email')}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--accent)',
-                        textDecoration: 'underline',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        padding: 0,
-                      }}
-                    >
-                      (change email)
-                    </button>
-                  </div>
-
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label
-                      htmlFor="otp-code"
-                      style={{
-                        display: 'block',
-                        marginBottom: '0.5rem',
-                        fontWeight: 500,
-                        color: 'var(--text-primary)',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      Verification Code
-                    </label>
-                    <input
-                      id="otp-code"
-                      type="text"
-                      value={otpCode}
-                      onChange={(e) =>
-                        setOtpCode(
-                          e.target.value.replace(/[^0-9]/g, '').slice(0, 6)
-                        )
-                      }
-                      placeholder="000000"
-                      disabled={otpLoading}
-                      maxLength={6}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: 'var(--radius)',
-                        border: `1px solid ${
-                          otpError ? 'var(--error)' : 'var(--border)'
-                        }`,
-                        backgroundColor: 'var(--bg-base)',
-                        color: 'var(--text-primary)',
-                        boxSizing: 'border-box',
-                        fontSize: '1.25rem',
-                        letterSpacing: '0.5rem',
-                        textAlign: 'center',
-                      }}
-                    />
-                    {otpError && (
-                      <p
-                        style={{
-                          color: 'var(--error)',
-                          fontSize: '0.75rem',
-                          marginTop: '0.25rem',
-                        }}
-                      >
-                        {otpError}
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={otpLoading || otpCode.length !== 6}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor:
-                        otpCode.length === 6
-                          ? 'var(--accent)'
-                          : 'var(--bg-secondary)',
-                      color: 'white',
-                      borderRadius: 'var(--radius)',
-                      fontWeight: 600,
-                      opacity: otpLoading ? 0.6 : 1,
-                      cursor:
-                        otpLoading || otpCode.length !== 6
-                          ? 'not-allowed'
-                          : 'pointer',
-                      border: 'none',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    {otpLoading ? 'Verifying...' : 'Verify OTP'}
-                  </button>
-
-                  <div style={{ textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={handleResendOTP}
-                      disabled={resendTimer > 0 || otpLoading}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color:
-                          resendTimer > 0
-                            ? 'var(--text-secondary)'
-                            : 'var(--accent)',
-                        textDecoration: 'underline',
-                        cursor:
-                          resendTimer > 0 ? 'not-allowed' : 'pointer',
-                        fontSize: '0.875rem',
-                        padding: 0,
-                      }}
-                    >
-                      {resendTimer > 0
-                        ? `Resend in ${resendTimer}s`
-                        : 'Resend OTP'}
-                    </button>
-                  </div>
-                </>
-              )}
-            </form>
-          </div>
-
-          {/* RIGHT COLUMN - PASSWORD LOGIN */}
-          <div style={{ paddingLeft: '1rem' }}>
-            <h2
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 600,
-                marginBottom: '1.5rem',
-                color: 'var(--text-primary)',
-              }}
-            >
-              Login with Password
-            </h2>
-
-            <form onSubmit={handlePasswordLogin} style={{ marginBottom: 0 }}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label
-                  htmlFor="password-email"
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.5rem',
-                    fontWeight: 500,
-                    color: 'var(--text-primary)',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  Email
-                </label>
-                <input
-                  id="password-email"
-                  type="email"
-                  value={passwordEmail}
-                  onChange={(e) => setPasswordEmail(e.target.value)}
-                  placeholder="you@university.edu"
-                  disabled={passwordLoading}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: 'var(--radius)',
-                    border: `1px solid ${
-                      passwordError ? 'var(--error)' : 'var(--border)'
-                    }`,
-                    backgroundColor: 'var(--bg-base)',
-                    color: 'var(--text-primary)',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label
-                  htmlFor="password"
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.5rem',
-                    fontWeight: 500,
-                    color: 'var(--text-primary)',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  disabled={passwordLoading}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: 'var(--radius)',
-                    border: `1px solid ${
-                      passwordError ? 'var(--error)' : 'var(--border)'
-                    }`,
-                    backgroundColor: 'var(--bg-base)',
-                    color: 'var(--text-primary)',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                <div style={{ marginTop: '0.5rem', textAlign: 'right' }}>
-                  <Link
-                    href="/forgot-password"
-                    style={{
-                      fontSize: '0.875rem',
-                      color: 'var(--accent)',
-                      textDecoration: 'none',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                {passwordError && (
-                  <p
-                    style={{
-                      color: 'var(--error)',
-                      fontSize: '0.75rem',
-                      marginTop: '0.25rem',
-                    }}
-                  >
-                    {passwordError}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={passwordLoading}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: 'var(--accent)',
-                  color: 'white',
-                  borderRadius: 'var(--radius)',
-                  fontWeight: 600,
-                  opacity: passwordLoading ? 0.6 : 1,
-                  cursor: passwordLoading ? 'not-allowed' : 'pointer',
-                  border: 'none',
-                }}
-              >
-                {passwordLoading ? 'Signing in...' : 'Sign In with Password'}
-              </button>
-            </form>
-          </div>
+            E-Lab
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+            Electronics Lab Management System
+          </p>
         </div>
 
-        {/* Bottom Section - Sign Up Link */}
-        <div
-          style={{
-            marginTop: '2rem',
-            textAlign: 'center',
-            fontSize: '0.875rem',
-            borderTop: '1px solid var(--border)',
-            paddingTop: '2rem',
-          }}
-        >
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            Don&apos;t have an account?
-          </p>
-          <Link
-            href="/register"
-            style={{ color: 'var(--accent)', fontWeight: 600 }}
+        {/* Login Form */}
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {error && (
+            <div
+              style={{
+                padding: '0.875rem',
+                backgroundColor: '#fee2e2',
+                color: '#991b1b',
+                borderRadius: 'var(--radius)',
+                fontSize: '0.875rem',
+                border: '1px solid #fecaca',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor="email"
+              style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: 'var(--text-primary)',
+              }}
+            >
+              Email Address
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                backgroundColor: 'var(--bg-base)',
+                color: 'var(--text-primary)',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: 'var(--text-primary)',
+              }}
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                backgroundColor: 'var(--bg-base)',
+                color: 'var(--text-primary)',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              padding: '0.875rem',
+              backgroundColor: loading ? 'var(--accent-muted)' : 'var(--accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--radius)',
+              fontSize: '1rem',
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              marginTop: '0.5rem',
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                (e.currentTarget as HTMLElement).style.opacity = '0.9';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                (e.currentTarget as HTMLElement).style.opacity = '1';
+              }
+            }}
           >
-            Create account
-          </Link>
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
+        </form>
+
+        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            Contact your administrator to create an account
+          </p>
         </div>
       </div>
     </div>

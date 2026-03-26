@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendOTP } from '@/lib/appwrite-auth';
+import { resendOTPEmail } from '@/lib/otp-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,9 +12,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Resend OTP via Appwrite
+    // Resend OTP via Resend service
     try {
-      await sendOTP(email);
+      await resendOTPEmail(email);
       return NextResponse.json(
         {
           success: true,
@@ -22,9 +22,10 @@ export async function POST(req: NextRequest) {
         },
         { status: 200 }
       );
-    } catch (otpError: any) {
+    } catch (otpError) {
+      const err = otpError as Error;
       return NextResponse.json(
-        { error: otpError.message || 'Failed to resend OTP' },
+        { error: err.message || 'Failed to resend OTP' },
         { status: 500 }
       );
     }

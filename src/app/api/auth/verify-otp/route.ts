@@ -1,41 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyOTP } from '@/lib/appwrite-auth';
+import { verifyOTPCode } from '@/lib/otp-service';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, otpCode } = await req.json();
+    const { email, otpCode } = await req.json();
 
-    if (!userId || !otpCode) {
+    console.log('[Verify OTP API] Received request for email:', email);
+
+    if (!email || !otpCode) {
+      console.log('[Verify OTP API] Missing email or otpCode');
       return NextResponse.json(
-        { error: 'User ID and OTP code are required' },
+        { error: 'Email and OTP code are required' },
         { status: 400 }
       );
     }
 
-    // Verify OTP code
-    try {
-      const isValid = await verifyOTP(userId, otpCode);
+    // Verify OTP code using Resend service
+    const isValid = await verifyOTPCode(email, otpCode);
 
-      if (!isValid) {
-        return NextResponse.json(
-          { error: 'Invalid OTP' },
-          { status: 400 }
-        );
-      }
-
+    if (!isValid) {
+      console.log('[Verify OTP API] OTP verification failed');
       return NextResponse.json(
-        {
-          success: true,
-          message: 'OTP verified successfully',
-        },
-        { status: 200 }
-      );
-    } catch (otpError: any) {
-      return NextResponse.json(
-        { error: otpError.message || 'Invalid OTP' },
+        { error: 'Invalid or expired OTP. Please try again.' },
         { status: 400 }
       );
     }
+
+    console.log('[Verify OTP API] OTP verified successfully');
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'OTP verified successfully',
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('OTP verification error:', error);
     return NextResponse.json(

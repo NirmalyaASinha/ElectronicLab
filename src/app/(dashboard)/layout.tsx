@@ -73,15 +73,15 @@ export default function DashboardLayout({
         <Image
           src="/RRU.png"
           alt="RRU Logo"
-          width={50}
-          height={50}
+          width={80}
+          height={80}
           style={{ objectFit: 'contain' }}
         />
         <Image
           src="/SASET.png"
           alt="SASET Logo"
-          width={50}
-          height={50}
+          width={80}
+          height={80}
           style={{ objectFit: 'contain' }}
         />
       </header>
