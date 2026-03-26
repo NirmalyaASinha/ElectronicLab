@@ -947,6 +947,10 @@ video {
 .border-\[var\(--danger\)\]{
   border-color:          var(--danger);
 }
+.border-\[\#dc3545\]{
+  --tw-border-opacity:          1;
+  border-color:          rgb(220 53 69 / var(--tw-border-opacity, 1));
+}
 .bg-\[var\(--accent\)\]{
   background-color:          var(--accent);
 }
@@ -973,6 +977,10 @@ video {
 }
 .bg-\[var\(--warning\)\]{
   background-color:          var(--warning);
+}
+.bg-\[\#dc3545\]{
+  --tw-bg-opacity:          1;
+  background-color:          rgb(220 53 69 / var(--tw-bg-opacity, 1));
 }
 .bg-opacity-20{
   --tw-bg-opacity:          0.2;

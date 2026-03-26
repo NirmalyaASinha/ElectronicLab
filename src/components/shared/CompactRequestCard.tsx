@@ -81,7 +81,7 @@ export default function CompactRequestCard({
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: '0',
-            minHeight: '280px',
+            height: '320px',
           }}
         >
         {/* Left Side: Student Information */}
@@ -178,6 +178,7 @@ export default function CompactRequestCard({
             flexDirection: 'column',
             gap: '12px',
             overflow: 'hidden',
+            height: '100%',
           }}
         >
           {/* Header */}

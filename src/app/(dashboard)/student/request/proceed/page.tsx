@@ -326,11 +326,11 @@ export default function RequestProceed() {
 
           {/* Error Message */}
           {error && (
-            <div className="p-4 rounded-lg bg-[var(--danger)] bg-opacity-20 border-2 border-[var(--danger)] flex gap-3 items-start animate-pulse">
-              <AlertCircle size={20} className="text-[var(--danger)] flex-shrink-0 mt-0.5" />
+            <div className="p-4 rounded-lg bg-[#dc3545] border-2 border-[#dc3545] flex gap-3 items-start animate-pulse">
+              <AlertCircle size={20} className="text-white flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-[var(--danger)] text-sm font-semibold">Error</p>
-                <p className="text-[var(--danger)] text-sm mt-1">{error}</p>
+                <p className="text-white text-sm font-semibold">Error</p>
+                <p className="text-white text-sm mt-1">{error}</p>
               </div>
             </div>
           )}

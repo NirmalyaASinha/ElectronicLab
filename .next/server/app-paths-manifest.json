@@ -1,10 +1,13 @@
 {
   "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/api/requests/route": "app/api/requests/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/(dashboard)/faculty/page": "app/(dashboard)/faculty/page.js",
-  "/(dashboard)/faculty/issued/page": "app/(dashboard)/faculty/issued/page.js",
-  "/(dashboard)/faculty/returns/page": "app/(dashboard)/faculty/returns/page.js",
+  "/api/requests/route": "app/api/requests/route.js",
+  "/api/components/route": "app/api/components/route.js",
+  "/api/faculty/route": "app/api/faculty/route.js",
+  "/(dashboard)/student/browse/page": "app/(dashboard)/student/browse/page.js",
+  "/(dashboard)/student/request/page": "app/(dashboard)/student/request/page.js",
+  "/(dashboard)/student/request/proceed/page": "app/(dashboard)/student/request/proceed/page.js",
   "/(dashboard)/faculty/approvals/page": "app/(dashboard)/faculty/approvals/page.js",
-  "/(dashboard)/profile/page": "app/(dashboard)/profile/page.js"
+  "/(dashboard)/student/page": "app/(dashboard)/student/page.js",
+  "/(dashboard)/student/requests/page": "app/(dashboard)/student/requests/page.js"
 }

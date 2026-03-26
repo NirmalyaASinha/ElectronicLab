@@ -79,15 +79,15 @@ export default function StudentRequests() {
             style={{
               padding: '16px',
               borderRadius: '8px',
-              backgroundColor: 'var(--danger-light)',
-              border: '1px solid var(--danger)',
+              backgroundColor: '#dc3545',
+              border: '1px solid #dc3545',
               display: 'flex',
               gap: '12px',
               alignItems: 'flex-start',
             }}
           >
-            <AlertCircle size={20} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
-            <p style={{ color: 'var(--danger)', fontSize: '13px' }}>{error}</p>
+            <AlertCircle size={20} style={{ color: 'white', flexShrink: 0, marginTop: '2px' }} />
+            <p style={{ color: 'white', fontSize: '13px' }}>{error}</p>
           </div>
         )}
 

@@ -43,6 +43,7 @@ export default function DashboardLayout({
       { label: 'Approvals', href: '/faculty/approvals', icon: '✅' },
       { label: 'Issued', href: '/faculty/issued', icon: '📤' },
       { label: 'Returns', href: '/faculty/returns', icon: '📥' },
+      { label: 'Inventory', href: '/faculty/components', icon: '🔍' },
       { label: 'Profile', href: '/profile', icon: '👤' },
     ],
     ADMIN: [
