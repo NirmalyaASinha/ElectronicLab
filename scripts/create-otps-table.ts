@@ -14,7 +14,7 @@ async function createOtpsTable() {
     `;
     
     // Use the database connection from the app
-    const { db } = await import('./src/db/index.js');
+    const { db } = await import('../src/db/index.js');
     console.log('Creating otps table...');
     
     // Execute raw SQL
