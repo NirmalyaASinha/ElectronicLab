@@ -1,31 +1,36 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ClipboardX } from 'lucide-react';
+import { ClipboardX, Search } from 'lucide-react';
 import {
   RequestGridCard,
   RequestGridSkeleton,
   type RequestListItem,
+  getEffectiveStatus,
   toStatus,
 } from '@/components/shared/request-pattern';
 import EmptyState from '@/components/ui/EmptyState';
 
-type FilterKey = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED';
+type FilterKey = 'ALL' | 'PENDING' | 'APPROVED' | 'ISSUED' | 'OVERDUE' | 'RETURNED' | 'REJECTED';
 
 const tabs: Array<{ key: FilterKey; label: string }> = [
   { key: 'ALL', label: 'All' },
   { key: 'PENDING', label: 'Pending' },
   { key: 'APPROVED', label: 'Approved' },
+  { key: 'ISSUED', label: 'Issued' },
+  { key: 'OVERDUE', label: 'Overdue' },
+  { key: 'RETURNED', label: 'Returned' },
   { key: 'REJECTED', label: 'Rejected' },
 ];
 
 export const dynamic = 'force-dynamic';
 
-export default function FacultyApprovalsPage() {
+export default function AdminRequestsPage() {
   const [requests, setRequests] = useState<RequestListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<FilterKey>('PENDING');
+  const [activeTab, setActiveTab] = useState<FilterKey>('ALL');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     const loadRequests = async () => {
@@ -51,34 +56,28 @@ export default function FacultyApprovalsPage() {
   }, []);
 
   const filteredRequests = useMemo(() => {
-    if (activeTab === 'ALL') {
-      return requests;
-    }
+    const term = search.trim().toLowerCase();
 
-    return requests.filter((request) => request.status === activeTab);
-  }, [activeTab, requests]);
+    return requests.filter((request) => {
+      const status = getEffectiveStatus(request);
+      const matchesTab = activeTab === 'ALL' ? true : status === activeTab;
+      const matchesSearch =
+        term.length === 0
+          ? true
+          : request.studentName.toLowerCase().includes(term) ||
+            request.studentRoll.toLowerCase().includes(term);
+
+      return matchesTab && matchesSearch;
+    });
+  }, [activeTab, requests, search]);
 
   return (
     <div className="animate-page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>Approvals</h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-            Review and respond to student component requests
-          </p>
-        </div>
-        <div
-          style={{
-            padding: '10px 14px',
-            borderRadius: '999px',
-            backgroundColor: 'var(--accent-light)',
-            color: 'var(--accent)',
-            fontSize: '13px',
-            fontWeight: 700,
-          }}
-        >
-          {requests.filter((request) => request.status === 'PENDING').length} pending
-        </div>
+      <div>
+        <h1 style={{ fontSize: '32px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>All Requests</h1>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+          Complete request history across all students
+        </p>
       </div>
 
       {error ? (
@@ -86,6 +85,33 @@ export default function FacultyApprovalsPage() {
           {error}
         </div>
       ) : null}
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          border: '1px solid var(--border)',
+          borderRadius: '14px',
+          backgroundColor: 'var(--bg-surface)',
+          padding: '12px 14px',
+        }}
+      >
+        <Search size={16} style={{ color: 'var(--text-muted)' }} />
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by student name, roll number..."
+          style={{
+            flex: 1,
+            border: 'none',
+            outline: 'none',
+            backgroundColor: 'transparent',
+            color: 'var(--text-primary)',
+            fontSize: '14px',
+          }}
+        />
+      </div>
 
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {tabs.map((tab) => (
@@ -119,16 +145,12 @@ export default function FacultyApprovalsPage() {
         <EmptyState
           icon={ClipboardX}
           title="No requests found"
-          subtitle={
-            activeTab === 'PENDING'
-              ? 'All requests have been reviewed'
-              : 'Try a different approval filter'
-          }
+          subtitle="Try a different search or status filter"
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredRequests.map((request) => (
-            <RequestGridCard key={request.id} request={request} href={`/requests/${request.id}`} viewerRole="FACULTY" />
+            <RequestGridCard key={request.id} request={request} href={`/requests/${request.id}`} viewerRole="ADMIN" />
           ))}
         </div>
       )}

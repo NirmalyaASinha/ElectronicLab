@@ -65,7 +65,14 @@ export default function DashboardLayout({
       users: { title: 'User Management', subtitle: 'Manage users and roles' },
     }
 
-    const titleInfo = titleMap[lastSegment] || { title: 'Dashboard', subtitle: '' }
+    const titleInfo =
+      pathname.includes('/admin/requests')
+        ? { title: 'All Requests', subtitle: 'Complete request history across all students' }
+        : pathname.includes('/requests/')
+          ? { title: 'Request Details', subtitle: 'Full request detail and actions' }
+          : pathname.includes('/admin/inventory/') && lastSegment !== 'inventory'
+            ? { title: 'Component Details', subtitle: 'Inspect stock, specs, and issue history' }
+            : titleMap[lastSegment] || { title: 'Dashboard', subtitle: '' }
     setPageTitle(titleInfo.title)
     setPageSubtitle(titleInfo.subtitle)
   }, [pathname])
@@ -153,6 +160,12 @@ export default function DashboardLayout({
           href: '/admin/inventory',
           icon: <Package {...baseIcon} />,
           isActive: pathname.includes('/inventory'),
+        },
+        {
+          label: 'Requests',
+          href: '/admin/requests',
+          icon: <FileText {...baseIcon} />,
+          isActive: pathname.includes('/admin/requests') || pathname.includes('/requests/'),
         },
         {
           label: 'Users',

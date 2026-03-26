@@ -57,29 +57,58 @@ export default function DashboardLayout({
   const items = navItems[role as keyof typeof navItems] || [];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-base)' }}>
-      {/* Sidebar */}
-      <aside
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-base)' }}>
+      {/* Top Header with Logos */}
+      <header
         style={{
-          width: sidebarOpen ? '240px' : '60px',
-          backgroundColor: 'var(--bg-surface)',
-          borderRight: '1px solid var(--border)',
-          padding: '1.5rem 1rem',
-          transition: 'width 0.3s ease',
           display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          height: '100vh',
-          left: 0,
-          top: 0,
-          zIndex: 100,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '1rem 2rem',
+          backgroundColor: 'var(--bg-surface)',
+          borderBottom: '1px solid var(--border)',
+          zIndex: 101,
         }}
       >
+        <Image
+          src="/RRU.png"
+          alt="RRU Logo"
+          width={50}
+          height={50}
+          style={{ objectFit: 'contain' }}
+        />
+        <Image
+          src="/SASET.png"
+          alt="SASET Logo"
+          width={50}
+          height={50}
+          style={{ objectFit: 'contain' }}
+        />
+      </header>
+
+      <div style={{ display: 'flex', flex: 1 }}>
+        {/* Sidebar */}
+        <aside
+          style={{
+            width: sidebarOpen ? '240px' : '60px',
+            backgroundColor: 'var(--bg-surface)',
+            borderRight: '1px solid var(--border)',
+            padding: '1.5rem 1rem',
+            transition: 'width 0.3s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            height: 'auto',
+            left: 0,
+            top: 0,
+            zIndex: 100,
+          }}
+        >
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: sidebarOpen ? 'space-between' : 'center',
+            justifyContent: sidebarOpen ? 'center' : 'center',
             marginBottom: '2rem',
             gap: sidebarOpen ? '0.75rem' : '0',
           }}
@@ -108,15 +137,6 @@ export default function DashboardLayout({
             }}
           >
             {sidebarOpen && (
-              <Image
-                src="/RRU.png"
-                alt="RRU Logo"
-                width={40}
-                height={40}
-                style={{ objectFit: 'contain' }}
-              />
-            )}
-            {sidebarOpen && (
               <h2
                 style={{
                   fontFamily: 'var(--font-display)',
@@ -128,15 +148,6 @@ export default function DashboardLayout({
               >
                 E-Lab
               </h2>
-            )}
-            {sidebarOpen && (
-              <Image
-                src="/SASET.png"
-                alt="SASET Logo"
-                width={40}
-                height={40}
-                style={{ objectFit: 'contain' }}
-              />
             )}
           </button>
           <button
@@ -266,8 +277,8 @@ export default function DashboardLayout({
       <main
         style={{
           flex: 1,
-          marginLeft: sidebarOpen ? '240px' : '60px',
-          transition: 'margin-left 0.3s ease',
+          marginLeft: 0,
+          transition: 'none',
           padding: '2rem',
           overflow: 'auto',
         }}
@@ -275,6 +286,7 @@ export default function DashboardLayout({
         {role === 'STUDENT' && <DashboardTopBar />}
         {children}
       </main>
+      </div>
     </div>
   );
 }
