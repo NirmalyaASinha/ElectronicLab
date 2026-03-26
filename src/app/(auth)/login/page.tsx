@@ -156,6 +156,23 @@ export default function LoginPage() {
         return;
       }
 
+      // Create NextAuth session using appwrite-otp provider
+      const signInResult = await signIn('appwrite-otp', {
+        email: data.user.email,
+        userId: data.user.id,
+        name: data.user.name,
+        role: data.user.role,
+        department: data.user.department,
+        redirect: false,
+      });
+
+      if (signInResult?.error) {
+        setOtpError('Failed to create session');
+        showNotification('Failed to create session', 'error');
+        setOtpLoading(false);
+        return;
+      }
+
       router.push(data.redirectUrl);
     } catch (error: any) {
       setOtpError(error.message || 'Failed to verify OTP');
@@ -290,7 +307,7 @@ export default function LoginPage() {
             textAlign: 'center',
           }}
         >
-          Electra Lab
+          E-Lab
         </h1>
         <p
           style={{

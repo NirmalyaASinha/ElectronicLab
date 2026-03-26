@@ -9,6 +9,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   providers: [
     Credentials({
+      id: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
@@ -45,6 +46,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           };
         } catch (error) {
           console.error('Auth authorize error:', error);
+          return null;
+        }
+      },
+    }),
+    Credentials({
+      id: 'appwrite-otp',
+      credentials: {
+        email: { label: 'Email', type: 'text' },
+        userId: { label: 'User ID', type: 'text' },
+        name: { label: 'Name', type: 'text' },
+        role: { label: 'Role', type: 'text' },
+        department: { label: 'Department', type: 'text' },
+      },
+      async authorize(credentials) {
+        try {
+          if (!credentials?.email) {
+            return null;
+          }
+
+          // User already verified via Appwrite OTP
+          // Just return the user data from credentials
+          return {
+            id: credentials.userId as string,
+            email: credentials.email as string,
+            name: credentials.name as string,
+            role: credentials.role as string,
+            department: credentials.department as string,
+          };
+        } catch (error) {
+          console.error('Appwrite OTP authorize error:', error);
           return null;
         }
       },

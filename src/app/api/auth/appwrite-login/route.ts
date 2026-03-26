@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { signIn } from '@/lib/auth';
 import { db } from '@/db';
 import { users } from '@/db/schema/users';
 import { eq } from 'drizzle-orm';
@@ -28,21 +27,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create Auth.js session server-side
-    // Since the user verified OTP with Appwrite, we can trust their identity
-    await signIn('appwrite-otp', {
-      email: user.email,
-      userId: user.id,
-      name: user.name,
-      role: user.role,
-      department: user.department,
-      redirect: false,
-    });
-
+    // Return user data for client to use with signIn
     return NextResponse.json(
       {
         success: true,
-        role: user.role,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          department: user.department,
+        },
         redirectUrl:
           user.role === 'STUDENT'
             ? '/dashboard/student'
