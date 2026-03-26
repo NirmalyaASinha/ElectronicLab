@@ -52,7 +52,7 @@ export default function LoginPage() {
               : '/admin';
         router.replace(redirectPath);
       } else {
-        router.replace('/dashboard');
+        router.replace('/');
       }
     } catch {
       setError('Login failed. Please try again.');
