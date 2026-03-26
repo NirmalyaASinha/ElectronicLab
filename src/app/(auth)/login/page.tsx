@@ -1,24 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { LoginSchema } from '@/lib/validations';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      setError(`Authentication error: ${errorParam}`);
-    }
-  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,24 +26,34 @@ export default function LoginPage() {
         return;
       }
 
-      // Step 1: Submit credentials and request OTP
-      const response = await fetch('/api/auth/login-step1', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Login failed');
+      if (!result?.ok) {
+        setError('Invalid email or password');
         setLoading(false);
         return;
       }
 
-      // Credentials verified, redirect to OTP verification
-      router.push(`/verify-otp?email=${encodeURIComponent(email)}`);
-    } catch {
+      // Get session to determine role-based redirect
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+
+      if (session?.user?.role) {
+        const redirectPath =
+          session.user.role === 'STUDENT'
+            ? '/student'
+            : session.user.role === 'FACULTY'
+              ? '/faculty'
+              : '/admin';
+        router.replace(redirectPath);
+      } else {
+        router.replace('/dashboard');
+      }
+    } catch (err) {
       setError('Login failed. Please try again.');
       setLoading(false);
     }
