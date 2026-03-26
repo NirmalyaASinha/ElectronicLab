@@ -16,11 +16,11 @@ export default function Home() {
     } else if (status === 'authenticated' && session) {
       const role = session.user.role;
       if (role === 'STUDENT') {
-        router.push('/dashboard/student');
+        router.push('/student');
       } else if (role === 'FACULTY') {
-        router.push('/dashboard/faculty');
+        router.push('/faculty');
       } else if (role === 'ADMIN') {
-        router.push('/dashboard/admin');
+        router.push('/admin');
       }
     }
   }, [status, session, router]);
