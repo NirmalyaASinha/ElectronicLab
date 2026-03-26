@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { users } from '@/db/schema/users';
 import { eq } from 'drizzle-orm';
-import { sendOTPViaAppwrite } from '@/lib/appwrite';
+import { sendOTP } from '@/lib/appwrite-auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,10 +28,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Send OTP via Appwrite
-    const otpResult = await sendOTPViaAppwrite(email);
+    try {
+      const userId = await sendOTP(email);
+      console.log(`OTP sent to ${email} - User ID: ${userId}`);
 
-    if (!otpResult.success) {
-      console.error('Failed to send OTP:', otpResult.error);
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'If an account exists with this email, an OTP will be sent',
+        },
+        { status: 200 }
+      );
+    } catch (otpError) {
+      console.error('Failed to send OTP:', otpError);
       // Still return success for security
       return NextResponse.json(
         {
@@ -41,20 +50,6 @@ export async function POST(req: NextRequest) {
         { status: 200 }
       );
     }
-
-    // In a real application, you would send an email with the OTP here
-    // For development, we'll just log it
-    console.log(`OTP sent to ${email} - Session ID: ${otpResult.sessionId}`);
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'If an account exists with this email, an OTP will be sent',
-        // For development only - remove in production
-        sessionId: process.env.NODE_ENV === 'development' ? otpResult.sessionId : undefined,
-      },
-      { status: 200 }
-    );
   } catch (error) {
     console.error('Forgot password error:', error);
     // Still return success for security

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendOTPViaAppwrite } from '@/lib/appwrite';
+import { sendOTP } from '@/lib/appwrite-auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,23 +13,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Send OTP via Appwrite
-    const result = await sendOTPViaAppwrite(email);
-
-    if (!result.success) {
+    try {
+      const userId = await sendOTP(email);
       return NextResponse.json(
-        { error: result.error || 'Failed to send OTP' },
+        {
+          success: true,
+          message: 'OTP sent successfully',
+          userId,
+        },
+        { status: 200 }
+      );
+    } catch (otpError: any) {
+      return NextResponse.json(
+        { error: otpError.message || 'Failed to send OTP' },
         { status: 500 }
       );
     }
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'OTP sent successfully',
-        sessionId: result.sessionId,
-      },
-      { status: 200 }
-    );
   } catch (error) {
     console.error('Send login OTP error:', error);
     return NextResponse.json(
