@@ -2,7 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/db';
 import { issueRequests, issueRequestItems, auditLogs, components, users } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, aliasedTable } from 'drizzle-orm';
+
+interface RequestRow {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentRoll: string | null;
+  studentDept: string;
+  facultyId: string | null;
+  facultyName: string | null;
+  facultyDept: string | null;
+  status: string;
+  purpose: string;
+  requestedAt: Date;
+  approvedAt: Date | null;
+  issuedAt: Date | null;
+  dueAt: Date | null;
+  returnedAt: Date | null;
+  rejectionReason: string | null;
+}
 
 export async function GET() {
   try {
@@ -11,14 +30,21 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Create aliases for student and faculty users
+    const studentUsers = aliasedTable(users, 'student');
+    const facultyUsers = aliasedTable(users, 'faculty');
+
     // Get all requests (or filtered by student if role is STUDENT)
     const baseQuery = db
       .select({
         id: issueRequests.id,
         studentId: issueRequests.studentId,
-        studentName: users.name,
-        studentRoll: users.rollNumber,
-        studentDept: users.department,
+        studentName: studentUsers.name,
+        studentRoll: studentUsers.rollNumber,
+        studentDept: studentUsers.department,
+        facultyId: issueRequests.facultyId,
+        facultyName: facultyUsers.name,
+        facultyDept: facultyUsers.department,
         status: issueRequests.status,
         purpose: issueRequests.purpose,
         requestedAt: issueRequests.requestedAt,
@@ -29,9 +55,10 @@ export async function GET() {
         rejectionReason: issueRequests.rejectionReason,
       })
       .from(issueRequests)
-      .innerJoin(users, eq(issueRequests.studentId, users.id));
+      .innerJoin(studentUsers, eq(issueRequests.studentId, studentUsers.id))
+      .leftJoin(facultyUsers, eq(issueRequests.facultyId, facultyUsers.id));
 
-    const requestsData = await (session.user.role === 'STUDENT'
+    const requestsData: RequestRow[] = await (session.user.role === 'STUDENT'
       ? baseQuery.where(eq(issueRequests.studentId, session.user.id)).orderBy(desc(issueRequests.createdAt))
       : baseQuery.orderBy(desc(issueRequests.createdAt)));
 
