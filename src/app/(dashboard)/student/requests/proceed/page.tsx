@@ -37,8 +37,10 @@ export default function ProceedRequest() {
     try {
       const res = await fetch('/api/faculty');
       const data = await res.json();
-      if (data.data) {
+      if (data.data && data.data.length > 0) {
         setFaculties(data.data);
+        // Auto-select first faculty as default
+        setSelectedFaculty(data.data[0].id);
       }
     } catch (error) {
       console.error('Error fetching faculties:', error);
@@ -75,6 +77,9 @@ export default function ProceedRequest() {
   };
 
   const handleSubmit = async () => {
+    console.log('Submit clicked - selectedFaculty:', selectedFaculty);
+    console.log('Available faculties:', faculties);
+    
     if (!selectedFaculty) {
       alert('Please select a faculty member');
       return;
@@ -87,6 +92,9 @@ export default function ProceedRequest() {
 
     setSubmitting(true);
     try {
+      const selectedFacultyObj = faculties.find((f) => f.id === selectedFaculty);
+      console.log('Selected faculty object:', selectedFacultyObj);
+      
       const requestData = {
         studentId: session?.user?.id,
         facultyId: selectedFaculty,
@@ -97,6 +105,8 @@ export default function ProceedRequest() {
           issueDeadlineDays: comp.daysAllowed,
         })),
       };
+
+      console.log('Submitting request with facultyId:', requestData.facultyId);
 
       const res = await fetch('/api/requests', {
         method: 'POST',

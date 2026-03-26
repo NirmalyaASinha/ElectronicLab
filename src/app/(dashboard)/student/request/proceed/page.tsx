@@ -41,6 +41,10 @@ export default function RequestProceed() {
       
       if (data.success && data.data) {
         setFaculty(data.data);
+        // Auto-select first faculty as default
+        if (data.data.length > 0) {
+          setFacultyId(data.data[0].id);
+        }
       }
     } catch (err) {
       console.error('Error fetching faculty:', err);
