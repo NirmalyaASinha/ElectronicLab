@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Loader, ChevronDown } from 'lucide-react';
 
 interface ComponentData {
@@ -36,10 +36,21 @@ export default function ComponentsInventory() {
   const [error, setError] = useState('');
   const [expandedComponent, setExpandedComponent] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [selectedComponent, setSelectedComponent] = useState<ComponentData | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const [activeIssueTab, setActiveIssueTab] = useState<'current' | 'past'>('current');
 
   useEffect(() => {
     fetchComponentsInventory();
   }, []);
+
+  // Scroll modal into view when opened
+  useEffect(() => {
+    if (modalOpen && modalRef.current) {
+      modalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [modalOpen]);
 
   const fetchComponentsInventory = async () => {
     try {
@@ -321,7 +332,10 @@ export default function ComponentsInventory() {
 
                 {/* Expand Button */}
                 <button
-                  onClick={() => setExpandedComponent(expandedComponent === component.id ? null : component.id)}
+                  onClick={() => {
+                    setSelectedComponent(component);
+                    setModalOpen(true);
+                  }}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -344,107 +358,310 @@ export default function ComponentsInventory() {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  {expandedComponent === component.id ? 'Hide Details' : 'View Details'}
-                  <ChevronDown
-                    size={14}
-                    style={{
-                      transition: 'transform 200ms',
-                      transform: expandedComponent === component.id ? 'rotate(180deg)' : 'rotate(0deg)',
-                    }}
-                  />
+                  View All Issues
+                  <ChevronDown size={14} style={{ transition: 'transform 200ms' }} />
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
 
-                {/* Expanded Details */}
-                {expandedComponent === component.id && (
-                  <div
+        {/* Issues Detail Modal */}
+        {modalOpen && selectedComponent && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '16px',
+              overflowY: 'auto',
+            }}
+            onClick={() => {
+              setModalOpen(false);
+              setSelectedComponent(null);
+            }}
+          >
+            {/* Modal Content */}
+            <div
+              ref={modalRef}
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border)',
+                maxWidth: '90vw',
+                width: '100%',
+                maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div
+                style={{
+                  padding: '20px',
+                  borderBottom: '1px solid var(--border)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  backgroundColor: 'var(--bg-elevated)',
+                }}
+              >
+                <div>
+                  <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    {selectedComponent.name}
+                  </h2>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    {selectedComponent.category}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setModalOpen(false);
+                    setSelectedComponent(null);
+                  }}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: '24px',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Stats Summary */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '16px',
+                  padding: '16px',
+                  backgroundColor: 'var(--bg-surface)',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Total
+                  </div>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--accent)' }}>
+                    {selectedComponent.quantityTotal}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Available
+                  </div>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#28a745' }}>
+                    {selectedComponent.quantityAvailable}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Issued
+                  </div>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#fd7e14' }}>
+                    {selectedComponent.quantityTotal - selectedComponent.quantityAvailable}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body - Scrollable Tabs */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Tab Navigation */}
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-surface)' }}>
+                  <button
+                    onClick={() => setActiveIssueTab('current')}
                     style={{
-                      borderTop: '1px solid var(--border)',
-                      display: 'grid',
-                      gridTemplateColumns: '1fr',
-                      gap: '0',
-                      maxHeight: '400px',
-                      overflowY: 'auto',
+                      flex: 1,
+                      padding: '12px 16px',
+                      textAlign: 'center',
+                      fontWeight: 600,
+                      fontSize: '13px',
+                      color: activeIssueTab === 'current' ? 'white' : 'var(--text-secondary)',
+                      backgroundColor: activeIssueTab === 'current' ? 'var(--accent)' : 'var(--bg-surface)',
+                      borderRight: '1px solid var(--border)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    {/* Current Issues */}
-                    <div style={{ padding: '16px', borderBottom: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                        Currently Issued ({component.currentIssues.length})
-                      </div>
-                      {component.currentIssues.length === 0 ? (
-                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No active issues</p>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {component.currentIssues.map((issue) => (
-                            <div
-                              key={issue.requestId}
-                              style={{
-                                padding: '10px',
-                                borderRadius: 'var(--radius-sm)',
-                                backgroundColor: 'var(--bg-muted)',
-                                border: '1px solid var(--border)',
-                              }}
-                            >
-                              <div style={{ fontWeight: 600, fontSize: '11px', color: 'var(--text-primary)' }}>
-                                {issue.studentName}
-                              </div>
-                              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                {issue.studentRoll} • {issue.quantity}x
-                              </div>
-                              <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                {new Date(issue.issuedAt).toLocaleDateString('en-IN')} to{' '}
-                                {new Date(issue.dueAt).toLocaleDateString('en-IN')}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    Currently Issued ({selectedComponent.currentIssues.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveIssueTab('past')}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      textAlign: 'center',
+                      fontWeight: 600,
+                      fontSize: '13px',
+                      color: activeIssueTab === 'past' ? 'white' : 'var(--text-secondary)',
+                      backgroundColor: activeIssueTab === 'past' ? 'var(--accent)' : 'var(--bg-surface)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    Past Issues ({selectedComponent.pastIssues.length})
+                  </button>
+                </div>
 
-                    {/* Past Issues */}
-                    {component.pastIssues.length > 0 && (
-                      <div style={{ padding: '16px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                          Past Issues ({component.pastIssues.length})
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {component.pastIssues.slice(0, 5).map((issue) => (
-                            <div
-                              key={issue.requestId}
-                              style={{
-                                padding: '10px',
-                                borderRadius: 'var(--radius-sm)',
-                                backgroundColor: 'var(--bg-muted)',
-                                border: '1px solid var(--border)',
-                              }}
-                            >
-                              <div style={{ fontWeight: 600, fontSize: '11px', color: 'var(--text-primary)' }}>
-                                {issue.studentName}
+                {/* Content Tabs - Scrollable */}
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  {/* Current Issues Tab */}
+                  <div style={{ height: '100%', overflowY: 'auto', padding: '16px', display: activeIssueTab === 'current' ? 'block' : 'none' }}>
+                    {selectedComponent.currentIssues.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-secondary)' }}>
+                        <p style={{ fontSize: '14px' }}>No active issues currently</p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {selectedComponent.currentIssues.map((issue) => (
+                          <div
+                            key={issue.requestId}
+                            style={{
+                              padding: '16px',
+                              borderRadius: 'var(--radius-md)',
+                              backgroundColor: 'var(--bg-elevated)',
+                              border: '1px solid var(--border)',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                              <div>
+                                <h3 style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', marginBottom: '2px' }}>
+                                  {issue.studentName}
+                                </h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                  Roll: {issue.studentRoll}
+                                </p>
                               </div>
-                              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                {issue.studentRoll} • {issue.quantity}x
-                              </div>
-                              <div style={{ fontSize: '9px', color: 'var(--success)', marginTop: '2px' }}>
-                                ✓ Returned: {new Date(issue.returnedAt).toLocaleDateString('en-IN')}
+                              <div
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: 'var(--radius-sm)',
+                                  backgroundColor: '#fd7e1420',
+                                  color: '#fd7e14',
+                                  fontWeight: 600,
+                                  fontSize: '12px',
+                                }}
+                              >
+                                {issue.quantity}x
                               </div>
                             </div>
-                          ))}
-                          {component.pastIssues.length > 5 && (
-                            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '8px', textAlign: 'center' }}>
-                              +{component.pastIssues.length - 5} more returns
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                              <div>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                  Issued Date
+                                </p>
+                                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                  {new Date(issue.issuedAt).toLocaleDateString('en-IN')}
+                                </p>
+                              </div>
+                              <div>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                  Due Date
+                                </p>
+                                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                  {new Date(issue.dueAt).toLocaleDateString('en-IN')}
+                                </p>
+                              </div>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
-                )}
+                </div>
+
+                {/* Past Issues Tab Content */}
+                <div style={{ height: '100%', overflowY: 'auto', padding: '16px', display: activeIssueTab === 'past' ? 'block' : 'none' }}>
+                  {selectedComponent.pastIssues.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-secondary)' }}>
+                      <p style={{ fontSize: '14px' }}>No past issues</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {selectedComponent.pastIssues.map((issue) => (
+                        <div
+                          key={issue.requestId}
+                          style={{
+                            padding: '16px',
+                            borderRadius: 'var(--radius-md)',
+                            backgroundColor: 'var(--bg-elevated)',
+                            border: '1px solid var(--border)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                            <div>
+                              <h3 style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', marginBottom: '2px' }}>
+                                {issue.studentName}
+                              </h3>
+                              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                Roll: {issue.studentRoll}
+                              </p>
+                            </div>
+                            <div
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: 'var(--radius-sm)',
+                                backgroundColor: '#28a74520',
+                                color: '#28a745',
+                                fontWeight: 600,
+                                fontSize: '12px',
+                              }}
+                            >
+                              ✓ Returned
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                            <div>
+                              <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                Quantity
+                              </p>
+                              <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {issue.quantity}x
+                              </p>
+                            </div>
+                            <div>
+                              <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                Issued
+                              </p>
+                              <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {new Date(issue.issuedAt).toLocaleDateString('en-IN')}
+                              </p>
+                            </div>
+                            <div>
+                              <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                Returned
+                              </p>
+                              <p style={{ fontSize: '12px', fontWeight: 600, color: '#28a745' }}>
+                                {new Date(issue.returnedAt).toLocaleDateString('en-IN')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
-  const [components, setComponents] = useState<ComponentData[]>([]);
