@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-// Module-level OTP store
+// Module-level OTP store for verification
 const otpStore: {
   [email: string]: {
     code: string;
@@ -18,8 +18,8 @@ export function generateOTPCode(): string {
 
 /**
  * Send OTP via Appwrite
- * For now, generates OTP locally and returns it
- * In production, integrate with Appwrite Messaging API
+ * Generates OTP locally and stores it for verification
+ * In production, email sending would be integrated with Appwrite Messaging API
  */
 export async function sendOTPViaAppwrite(email: string): Promise<{
   success: boolean;
@@ -36,13 +36,14 @@ export async function sendOTPViaAppwrite(email: string): Promise<{
     const sessionId = crypto.randomBytes(16).toString('hex');
     const userId = crypto.randomBytes(16).toString('hex');
 
-    // In production, use Appwrite Messaging API to send email
-    // For now, log to console for development
-    console.log(`[Appwrite OTP] Email: ${email}`);
-    console.log(`[Appwrite OTP] Code: ${otpCode}`);
-    console.log(`[Appwrite OTP] Session ID: ${sessionId}`);
+    // Log OTP for development environment
+    console.log(`[Appwrite OTP Service] Email: ${email}`);
+    console.log(`[Appwrite OTP Service] Code: ${otpCode}`);
+    console.log(`[Appwrite OTP Service] Session ID: ${sessionId}`);
+    console.log(`[Appwrite OTP Service] Endpoint: ${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}`);
+    console.log(`[Appwrite OTP Service] Project ID: ${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`);
 
-    // Store OTP in memory with expiry
+    // Store OTP in memory with expiry for verification
     otpStore[email] = {
       code: otpCode,
       sessionId,
@@ -91,19 +92,13 @@ export async function verifyOTPCode(email: string, otpCode: string): Promise<{
       };
     }
 
-    // Verify code (allow both actual code and any code in development)
+    // Verify code
     if (storedOtp.code !== otpCode) {
-      if (process.env.NODE_ENV !== 'development') {
+      // In development, accept any 6-digit code as fallback
+      if (process.env.NODE_ENV !== 'development' || !/^\d{6}$/.test(otpCode)) {
         return {
           success: false,
           error: 'Invalid OTP code',
-        };
-      }
-      // In development, accept any code that looks like a number
-      if (!/^\d{6}$/.test(otpCode)) {
-        return {
-          success: false,
-          error: 'OTP must be 6 digits',
         };
       }
     }
