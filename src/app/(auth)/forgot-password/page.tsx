@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -92,7 +91,7 @@ export default function ForgotPasswordPage() {
       } else {
         showNotification(data.error || 'Something went wrong', 'error');
       }
-    } catch (error) {
+    } catch (_error) {
       showNotification('Failed to send reset email', 'error');
     } finally {
       setLoading(false);

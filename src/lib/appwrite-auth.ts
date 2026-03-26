@@ -11,7 +11,7 @@ export async function sendOTP(email: string): Promise<string> {
     const session = await account.createEmailToken(ID.unique(), email);
     console.log('[Appwrite] OTP sent successfully. UserId:', session.userId);
     return session.userId;
-  } catch (error) {
+  } catch (_error) {
     const err = error as Record<string, unknown>;
     console.error('[Appwrite] Error sending OTP:', error);
     console.error('[Appwrite] Error details:', {
@@ -34,7 +34,7 @@ export async function verifyOTP(userId: string, otp: string): Promise<boolean> {
     const session = await account.createSession(userId, otp);
     console.log('[Appwrite] OTP verified successfully. Session ID:', session.$id);
     return true;
-  } catch (error) {
+  } catch (_error) {
     const err = error as Record<string, unknown>;
     console.error('[Appwrite] Error verifying OTP:', {
       message: err?.message,
@@ -55,7 +55,7 @@ export async function verifyOTP(userId: string, otp: string): Promise<boolean> {
 export async function getAppwriteSession() {
   try {
     return await account.get();
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -66,7 +66,7 @@ export async function getAppwriteSession() {
 export async function logoutAppwrite() {
   try {
     await account.deleteSession('current');
-  } catch (error) {
+  } catch (_error) {
     // session may already be expired - that's ok
   }
 }

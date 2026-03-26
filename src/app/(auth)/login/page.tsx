@@ -95,7 +95,7 @@ export default function LoginPage() {
               : '/admin';
         setTimeout(() => router.push(redirectPath), 1000);
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Login failed. Please try again.');
       showNotification('Login failed. Please try again.', 'error');
     } finally {

@@ -109,7 +109,7 @@ export default function CreateUserPage() {
       setTimeout(() => {
         router.push('/admin');
       }, 2000);
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to create user. Please try again.');
       showNotification('Failed to create user', 'error');
     } finally {
