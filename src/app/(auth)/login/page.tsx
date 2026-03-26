@@ -23,7 +23,6 @@ export default function LoginPage() {
   // Password Flow State
   const [passwordEmail, setPasswordEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
@@ -108,10 +107,7 @@ export default function LoginPage() {
       showNotification('OTP sent to your email!', 'success');
     } catch (error: any) {
       setOtpError(error.message || 'Failed to send OTP');
-      showNotification(
-        error.message || 'Failed to send OTP',
-        'error'
-      );
+      showNotification(error.message || 'Failed to send OTP', 'error');
     } finally {
       setOtpLoading(false);
     }
@@ -143,7 +139,6 @@ export default function LoginPage() {
         return;
       }
 
-      // OTP verified! Now create Auth.js session
       showNotification('OTP verified! Logging in...', 'success');
 
       const res = await fetch('/api/auth/appwrite-login', {
@@ -161,14 +156,10 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect based on role
       router.push(data.redirectUrl);
     } catch (error: any) {
       setOtpError(error.message || 'Failed to verify OTP');
-      showNotification(
-        error.message || 'Failed to verify OTP',
-        'error'
-      );
+      showNotification(error.message || 'Failed to verify OTP', 'error');
     } finally {
       setOtpLoading(false);
     }
@@ -221,7 +212,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Get session to determine redirect
       const sessionRes = await fetch('/api/auth/session');
       const session = await sessionRes.json();
 
@@ -257,14 +247,14 @@ export default function LoginPage() {
       <div
         style={{
           width: '100%',
-          maxWidth: '400px',
+          maxWidth: '950px',
           backgroundColor: 'var(--bg-surface)',
           padding: '2rem',
           borderRadius: 'var(--radius)',
           border: '1px solid var(--border)',
         }}
       >
-        {/* Logos */}
+        {/* Header */}
         <div
           style={{
             display: 'flex',
@@ -297,6 +287,7 @@ export default function LoginPage() {
             fontFamily: 'var(--font-display)',
             marginBottom: '0.5rem',
             color: 'var(--text-primary)',
+            textAlign: 'center',
           }}
         >
           Electra Lab
@@ -306,365 +297,387 @@ export default function LoginPage() {
             color: 'var(--text-secondary)',
             marginBottom: '2rem',
             fontSize: '0.875rem',
+            textAlign: 'center',
           }}
         >
           Component Management System
         </p>
 
-        {/* OTP LOGIN FORM (Primary) */}
-        {otpStep === 'email' ? (
-          <form onSubmit={handleSendOTP} style={{ marginBottom: '2rem' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label
-                htmlFor="otp-email"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                  fontSize: '0.875rem',
-                }}
-              >
-                Login with OTP
-              </label>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label
-                htmlFor="otp-email"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: 500,
-                  color: 'var(--text-primary)',
-                  fontSize: '0.875rem',
-                }}
-              >
-                Email
-              </label>
-              <input
-                id="otp-email"
-                type="email"
-                value={otpEmail}
-                onChange={(e) => setOtpEmail(e.target.value)}
-                placeholder="you@university.edu"
-                disabled={otpLoading}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: 'var(--radius)',
-                  border: `1px solid ${
-                    otpError ? 'var(--error)' : 'var(--border)'
-                  }`,
-                  backgroundColor: 'var(--bg-base)',
-                  color: 'var(--text-primary)',
-                  boxSizing: 'border-box',
-                }}
-              />
-              {otpError && (
-                <p
-                  style={{
-                    color: 'var(--error)',
-                    fontSize: '0.75rem',
-                    marginTop: '0.25rem',
-                  }}
-                >
-                  {otpError}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={otpLoading}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: 'var(--accent)',
-                color: 'white',
-                borderRadius: 'var(--radius)',
-                fontWeight: 600,
-                opacity: otpLoading ? 0.6 : 1,
-                cursor: otpLoading ? 'not-allowed' : 'pointer',
-                border: 'none',
-              }}
-            >
-              {otpLoading ? 'Sending...' : 'Send OTP'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOTP} style={{ marginBottom: '2rem' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <p
-                style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--text-secondary)',
-                  marginBottom: '0.5rem',
-                }}
-              >
-                OTP sent to {otpEmail}
-              </p>
-              <button
-                type="button"
-                onClick={() => setOtpStep('email')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent)',
-                  textDecoration: 'underline',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  padding: 0,
-                }}
-              >
-                (change email)
-              </button>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label
-                htmlFor="otp-code"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: 500,
-                  color: 'var(--text-primary)',
-                  fontSize: '0.875rem',
-                }}
-              >
-                Verification Code
-              </label>
-              <input
-                id="otp-code"
-                type="text"
-                value={otpCode}
-                onChange={(e) =>
-                  setOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))
-                }
-                placeholder="000000"
-                disabled={otpLoading}
-                maxLength={6}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: 'var(--radius)',
-                  border: `1px solid ${
-                    otpError ? 'var(--error)' : 'var(--border)'
-                  }`,
-                  backgroundColor: 'var(--bg-base)',
-                  color: 'var(--text-primary)',
-                  boxSizing: 'border-box',
-                  fontSize: '1.25rem',
-                  letterSpacing: '0.5rem',
-                  textAlign: 'center',
-                }}
-              />
-              {otpError && (
-                <p
-                  style={{
-                    color: 'var(--error)',
-                    fontSize: '0.75rem',
-                    marginTop: '0.25rem',
-                  }}
-                >
-                  {otpError}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={otpLoading || otpCode.length !== 6}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor:
-                  otpCode.length === 6 ? 'var(--accent)' : 'var(--bg-secondary)',
-                color: 'white',
-                borderRadius: 'var(--radius)',
-                fontWeight: 600,
-                opacity: otpLoading ? 0.6 : 1,
-                cursor:
-                  otpLoading || otpCode.length !== 6
-                    ? 'not-allowed'
-                    : 'pointer',
-                border: 'none',
-              }}
-            >
-              {otpLoading ? 'Verifying...' : 'Verify OTP'}
-            </button>
-
-            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-              <button
-                type="button"
-                onClick={handleResendOTP}
-                disabled={resendTimer > 0 || otpLoading}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: resendTimer > 0 ? 'var(--text-secondary)' : 'var(--accent)',
-                  textDecoration: 'underline',
-                  cursor: resendTimer > 0 ? 'not-allowed' : 'pointer',
-                  fontSize: '0.875rem',
-                  padding: 0,
-                }}
-              >
-                {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Divider */}
+        {/* Two Column Layout */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            margin: '2rem 0',
-            gap: '1rem',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '2rem',
           }}
         >
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            OR
-          </span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
-        </div>
-
-        {/* PASSWORD LOGIN FORM (Fallback) */}
-        <form onSubmit={handlePasswordLogin}>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label
-              htmlFor="password-email"
+          {/* LEFT COLUMN - OTP LOGIN */}
+          <div
+            style={{
+              paddingRight: '1rem',
+              borderRight: '1px solid var(--border)',
+            }}
+          >
+            <h2
               style={{
-                display: 'block',
-                marginBottom: '0.5rem',
+                fontSize: '1.25rem',
                 fontWeight: 600,
+                marginBottom: '1.5rem',
                 color: 'var(--text-primary)',
-                fontSize: '0.875rem',
+              }}
+            >
+              Login with OTP
+            </h2>
+
+            <form
+              onSubmit={otpStep === 'email' ? handleSendOTP : handleVerifyOTP}
+              style={{ marginBottom: 0 }}
+            >
+              {otpStep === 'email' ? (
+                <>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label
+                      htmlFor="otp-email"
+                      style={{
+                        display: 'block',
+                        marginBottom: '0.5rem',
+                        fontWeight: 500,
+                        color: 'var(--text-primary)',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Email
+                    </label>
+                    <input
+                      id="otp-email"
+                      type="email"
+                      value={otpEmail}
+                      onChange={(e) => setOtpEmail(e.target.value)}
+                      placeholder="you@university.edu"
+                      disabled={otpLoading}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        borderRadius: 'var(--radius)',
+                        border: `1px solid ${
+                          otpError ? 'var(--error)' : 'var(--border)'
+                        }`,
+                        backgroundColor: 'var(--bg-base)',
+                        color: 'var(--text-primary)',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    {otpError && (
+                      <p
+                        style={{
+                          color: 'var(--error)',
+                          fontSize: '0.75rem',
+                          marginTop: '0.25rem',
+                        }}
+                      >
+                        {otpError}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={otpLoading}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: 'var(--accent)',
+                      color: 'white',
+                      borderRadius: 'var(--radius)',
+                      fontWeight: 600,
+                      opacity: otpLoading ? 0.6 : 1,
+                      cursor: otpLoading ? 'not-allowed' : 'pointer',
+                      border: 'none',
+                    }}
+                  >
+                    {otpLoading ? 'Sending...' : 'Send OTP'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <p
+                      style={{
+                        fontSize: '0.875rem',
+                        color: 'var(--text-secondary)',
+                        marginBottom: '0.5rem',
+                      }}
+                    >
+                      OTP sent to {otpEmail}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setOtpStep('email')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent)',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        padding: 0,
+                      }}
+                    >
+                      (change email)
+                    </button>
+                  </div>
+
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label
+                      htmlFor="otp-code"
+                      style={{
+                        display: 'block',
+                        marginBottom: '0.5rem',
+                        fontWeight: 500,
+                        color: 'var(--text-primary)',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Verification Code
+                    </label>
+                    <input
+                      id="otp-code"
+                      type="text"
+                      value={otpCode}
+                      onChange={(e) =>
+                        setOtpCode(
+                          e.target.value.replace(/[^0-9]/g, '').slice(0, 6)
+                        )
+                      }
+                      placeholder="000000"
+                      disabled={otpLoading}
+                      maxLength={6}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        borderRadius: 'var(--radius)',
+                        border: `1px solid ${
+                          otpError ? 'var(--error)' : 'var(--border)'
+                        }`,
+                        backgroundColor: 'var(--bg-base)',
+                        color: 'var(--text-primary)',
+                        boxSizing: 'border-box',
+                        fontSize: '1.25rem',
+                        letterSpacing: '0.5rem',
+                        textAlign: 'center',
+                      }}
+                    />
+                    {otpError && (
+                      <p
+                        style={{
+                          color: 'var(--error)',
+                          fontSize: '0.75rem',
+                          marginTop: '0.25rem',
+                        }}
+                      >
+                        {otpError}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={otpLoading || otpCode.length !== 6}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor:
+                        otpCode.length === 6
+                          ? 'var(--accent)'
+                          : 'var(--bg-secondary)',
+                      color: 'white',
+                      borderRadius: 'var(--radius)',
+                      fontWeight: 600,
+                      opacity: otpLoading ? 0.6 : 1,
+                      cursor:
+                        otpLoading || otpCode.length !== 6
+                          ? 'not-allowed'
+                          : 'pointer',
+                      border: 'none',
+                      marginBottom: '1rem',
+                    }}
+                  >
+                    {otpLoading ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={handleResendOTP}
+                      disabled={resendTimer > 0 || otpLoading}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color:
+                          resendTimer > 0
+                            ? 'var(--text-secondary)'
+                            : 'var(--accent)',
+                        textDecoration: 'underline',
+                        cursor:
+                          resendTimer > 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.875rem',
+                        padding: 0,
+                      }}
+                    >
+                      {resendTimer > 0
+                        ? `Resend in ${resendTimer}s`
+                        : 'Resend OTP'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </form>
+          </div>
+
+          {/* RIGHT COLUMN - PASSWORD LOGIN */}
+          <div style={{ paddingLeft: '1rem' }}>
+            <h2
+              style={{
+                fontSize: '1.25rem',
+                fontWeight: 600,
+                marginBottom: '1.5rem',
+                color: 'var(--text-primary)',
               }}
             >
               Login with Password
-            </label>
-          </div>
+            </h2>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label
-              htmlFor="password-email"
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontWeight: 500,
-                color: 'var(--text-primary)',
-                fontSize: '0.875rem',
-              }}
-            >
-              Email
-            </label>
-            <input
-              id="password-email"
-              type="email"
-              value={passwordEmail}
-              onChange={(e) => setPasswordEmail(e.target.value)}
-              placeholder="you@university.edu"
-              disabled={passwordLoading}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: 'var(--radius)',
-                border: `1px solid ${
-                  passwordError ? 'var(--error)' : 'var(--border)'
-                }`,
-                backgroundColor: 'var(--bg-base)',
-                color: 'var(--text-primary)',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
+            <form onSubmit={handlePasswordLogin} style={{ marginBottom: 0 }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label
+                  htmlFor="password-email"
+                  style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: 500,
+                    color: 'var(--text-primary)',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Email
+                </label>
+                <input
+                  id="password-email"
+                  type="email"
+                  value={passwordEmail}
+                  onChange={(e) => setPasswordEmail(e.target.value)}
+                  placeholder="you@university.edu"
+                  disabled={passwordLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: 'var(--radius)',
+                    border: `1px solid ${
+                      passwordError ? 'var(--error)' : 'var(--border)'
+                    }`,
+                    backgroundColor: 'var(--bg-base)',
+                    color: 'var(--text-primary)',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
 
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label
-              htmlFor="password"
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontWeight: 500,
-                color: 'var(--text-primary)',
-                fontSize: '0.875rem',
-              }}
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              disabled={passwordLoading}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: 'var(--radius)',
-                border: `1px solid ${
-                  passwordError ? 'var(--error)' : 'var(--border)'
-                }`,
-                backgroundColor: 'var(--bg-base)',
-                color: 'var(--text-primary)',
-                boxSizing: 'border-box',
-              }}
-            />
-            <div style={{ marginTop: '0.5rem', textAlign: 'right' }}>
-              <Link
-                href="/forgot-password"
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label
+                  htmlFor="password"
+                  style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: 500,
+                    color: 'var(--text-primary)',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  disabled={passwordLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: 'var(--radius)',
+                    border: `1px solid ${
+                      passwordError ? 'var(--error)' : 'var(--border)'
+                    }`,
+                    backgroundColor: 'var(--bg-base)',
+                    color: 'var(--text-primary)',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <div style={{ marginTop: '0.5rem', textAlign: 'right' }}>
+                  <Link
+                    href="/forgot-password"
+                    style={{
+                      fontSize: '0.875rem',
+                      color: 'var(--accent)',
+                      textDecoration: 'none',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                {passwordError && (
+                  <p
+                    style={{
+                      color: 'var(--error)',
+                      fontSize: '0.75rem',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    {passwordError}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={passwordLoading}
                 style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--accent)',
-                  textDecoration: 'none',
-                  fontWeight: 500,
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--accent)',
+                  color: 'white',
+                  borderRadius: 'var(--radius)',
+                  fontWeight: 600,
+                  opacity: passwordLoading ? 0.6 : 1,
+                  cursor: passwordLoading ? 'not-allowed' : 'pointer',
+                  border: 'none',
                 }}
               >
-                Forgot password?
-              </Link>
-            </div>
-            {passwordError && (
-              <p
-                style={{
-                  color: 'var(--error)',
-                  fontSize: '0.75rem',
-                  marginTop: '0.25rem',
-                }}
-              >
-                {passwordError}
-              </p>
-            )}
+                {passwordLoading ? 'Signing in...' : 'Sign In with Password'}
+              </button>
+            </form>
           </div>
+        </div>
 
-          <button
-            type="submit"
-            disabled={passwordLoading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              backgroundColor: 'var(--accent)',
-              color: 'white',
-              borderRadius: 'var(--radius)',
-              fontWeight: 600,
-              opacity: passwordLoading ? 0.6 : 1,
-              cursor: passwordLoading ? 'not-allowed' : 'pointer',
-              border: 'none',
-            }}
-          >
-            {passwordLoading ? 'Signing in...' : 'Sign In with Password'}
-          </button>
-        </form>
-
-        {/* Sign Up Link */}
-        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.875rem' }}>
+        {/* Bottom Section - Sign Up Link */}
+        <div
+          style={{
+            marginTop: '2rem',
+            textAlign: 'center',
+            fontSize: '0.875rem',
+            borderTop: '1px solid var(--border)',
+            paddingTop: '2rem',
+          }}
+        >
           <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
             Don&apos;t have an account?
           </p>
-          <Link href="/register" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+          <Link
+            href="/register"
+            style={{ color: 'var(--accent)', fontWeight: 600 }}
+          >
             Create account
           </Link>
         </div>
@@ -672,4 +685,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
