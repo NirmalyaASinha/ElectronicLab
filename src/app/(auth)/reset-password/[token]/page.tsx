@@ -30,7 +30,7 @@ export default function ResetPasswordPage() {
 
         const data = await res.json();
         setIsValid(data.valid);
-      } catch (_error) {
+      } catch {
         setIsValid(false);
       } finally {
         setValidating(false);
@@ -142,7 +142,7 @@ export default function ResetPasswordPage() {
       } else {
         showNotification(data.error || 'Failed to reset password', 'error');
       }
-    } catch (_error) {
+    } catch {
       showNotification('Failed to reset password', 'error');
     } finally {
       setLoading(false);

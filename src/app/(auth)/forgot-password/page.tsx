@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
       } else {
         showNotification(data.error || 'Something went wrong', 'error');
       }
-    } catch (_error) {
+    } catch {
       showNotification('Failed to send reset email', 'error');
     } finally {
       setLoading(false);

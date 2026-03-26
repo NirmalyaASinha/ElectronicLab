@@ -154,7 +154,7 @@ export default function VerifyOTPPage() {
       } else {
         showNotification(data.error || 'Invalid OTP', 'error');
       }
-    } catch (_error) {
+    } catch {
       showNotification('Failed to verify OTP', 'error');
     } finally {
       setLoading(false);
@@ -179,7 +179,7 @@ export default function VerifyOTPPage() {
       } else {
         showNotification(data.error || 'Failed to resend OTP', 'error');
       }
-    } catch (_error) {
+    } catch {
       showNotification('Failed to resend OTP', 'error');
     } finally {
       setResendLoading(false);

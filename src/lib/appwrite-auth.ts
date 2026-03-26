@@ -12,8 +12,8 @@ export async function sendOTP(email: string): Promise<string> {
     console.log('[Appwrite] OTP sent successfully. UserId:', session.userId);
     return session.userId;
   } catch (_error) {
-    const err = error as Record<string, unknown>;
-    console.error('[Appwrite] Error sending OTP:', error);
+    const err = _error as Record<string, unknown>;
+    console.error('[Appwrite] Error sending OTP:', _error);
     console.error('[Appwrite] Error details:', {
       message: err?.message,
       code: err?.code,
@@ -35,14 +35,14 @@ export async function verifyOTP(userId: string, otp: string): Promise<boolean> {
     console.log('[Appwrite] OTP verified successfully. Session ID:', session.$id);
     return true;
   } catch (_error) {
-    const err = error as Record<string, unknown>;
+    const err = _error as Record<string, unknown>;
     console.error('[Appwrite] Error verifying OTP:', {
       message: err?.message,
       code: err?.code,
       status: err?.status,
       type: err?.type,
     });
-    console.error('[Appwrite] Full error:', error);
+    console.error('[Appwrite] Full error:', _error);
     // Don't return false - throw the error so the API can see the details
     const errorMessage = (err?.message as string) || 'Invalid OTP code';
     throw new Error(errorMessage);
