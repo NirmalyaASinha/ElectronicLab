@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
-import { getRelativeTime } from '@/lib/date-utils';
-import RequestCard from '@/components/shared/RequestCard';
+import CompactRequestCard from '@/components/shared/CompactRequestCard';
 
 interface Component {
+  id: string;
+  componentId: string;
   name: string;
   category: string;
   quantity: number;
@@ -13,6 +14,10 @@ interface Component {
 
 interface Request {
   id: string;
+  studentId: string;
+  studentName: string;
+  studentRoll: string;
+  studentDept: string;
   status: string;
   purpose: string;
   requestedAt: string;
@@ -58,7 +63,7 @@ export default function StudentRequests() {
   if (loading) {
     return (
       <div className="animate-page-enter">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingY: '48px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '48px', paddingBottom: '48px' }}>
           <Loader style={{ animation: 'spin 1s linear infinite' }} size={32} color="var(--accent)" />
         </div>
       </div>
@@ -114,26 +119,13 @@ export default function StudentRequests() {
         ) : (
           <div style={{ display: 'grid', gap: '16px' }}>
             {requests.map((request) => (
-              <RequestCard
+              <CompactRequestCard
                 key={request.id}
                 request={{
-                  id: request.id,
-                  status: request.status,
-                  purpose: request.purpose,
-                  requestedAt: new Date(request.requestedAt),
-                  approvedAt: request.approvedAt ? new Date(request.approvedAt) : undefined,
-                  issuedAt: request.issuedAt ? new Date(request.issuedAt) : undefined,
-                  dueAt: request.dueAt ? new Date(request.dueAt) : undefined,
-                  returnedAt: request.returnedAt ? new Date(request.returnedAt) : undefined,
-                  rejectionReason: request.rejectionReason,
+                  ...request,
+                  items: request.items || [],
                 }}
-                student={{
-                  name: 'You',
-                  email: '',
-                  department: 'Student',
-                }}
-                items={request.items || []}
-                showActions={null}
+                mode="view"
               />
             ))}
           </div>

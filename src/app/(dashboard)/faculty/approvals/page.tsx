@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
-import RequestCard from '@/components/shared/RequestCard';
+import CompactRequestCard from '@/components/shared/CompactRequestCard';
 
 interface Component {
+  id: string;
+  componentId: string;
   name: string;
   category: string;
   quantity: number;
@@ -29,6 +31,7 @@ export default function FacultyApprovals() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPendingRequests();
@@ -57,6 +60,7 @@ export default function FacultyApprovals() {
 
   const handleApprove = async (requestId: string) => {
     try {
+      setProcessingId(requestId);
       const res = await fetch(`/api/requests/${requestId}`, {
         method: 'PATCH',
         headers: {
@@ -75,11 +79,14 @@ export default function FacultyApprovals() {
       alert('Request approved successfully!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve');
+    } finally {
+      setProcessingId(null);
     }
   };
 
   const handleReject = async (requestId: string, reason: string) => {
     try {
+      setProcessingId(requestId);
       const res = await fetch(`/api/requests/${requestId}`, {
         method: 'PATCH',
         headers: {
@@ -98,6 +105,8 @@ export default function FacultyApprovals() {
       alert('Request rejected successfully!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reject');
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -160,24 +169,21 @@ export default function FacultyApprovals() {
         ) : (
           <div style={{ display: 'grid', gap: '16px' }}>
             {requests.map((request) => (
-              <RequestCard
+              <CompactRequestCard
                 key={request.id}
                 request={{
-                  id: request.id,
-                  status: request.status,
-                  purpose: request.purpose,
-                  requestedAt: new Date(request.requestedAt),
+                  ...request,
+                  items: request.items || [],
                 }}
-                student={{
-                  name: request.studentName,
-                  email: request.studentEmail || '',
-                  rollNumber: request.studentRoll,
-                  department: request.studentDept,
+                mode="approvals"
+                isProcessing={processingId === request.id}
+                onApprove={() => handleApprove(request.id)}
+                onReject={() => {
+                  const reason = prompt('Enter reason for rejection (optional):');
+                  if (reason !== null) {
+                    handleReject(request.id, reason);
+                  }
                 }}
-                items={request.items || []}
-                showActions="approve"
-                onApprove={handleApprove}
-                onReject={handleReject}
               />
             ))}
           </div>

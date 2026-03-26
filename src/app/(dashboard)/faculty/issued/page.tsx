@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
-import RequestCard from '@/components/shared/RequestCard';
+import CompactRequestCard from '@/components/shared/CompactRequestCard';
 
 interface Component {
+  id: string;
+  componentId: string;
   name: string;
   category: string;
   quantity: number;
@@ -19,8 +21,8 @@ interface Request {
   studentEmail?: string;
   status: string;
   purpose: string;
-  requestedAt: string;
   approvedAt: string;
+  issuedAt?: string;
   items: Component[];
 }
 
@@ -137,24 +139,13 @@ export default function FacultyIssued() {
         ) : (
           <div style={{ display: 'grid', gap: '16px' }}>
             {requests.map((request) => (
-              <RequestCard
+              <CompactRequestCard
                 key={request.id}
                 request={{
-                  id: request.id,
-                  status: request.status,
-                  purpose: request.purpose,
-                  requestedAt: new Date(request.requestedAt),
-                  approvedAt: new Date(request.approvedAt),
+                  ...request,
+                  returnedAt: undefined,
                 }}
-                student={{
-                  name: request.studentName,
-                  email: request.studentEmail || '',
-                  rollNumber: request.studentRoll,
-                  department: request.studentDept,
-                }}
-                items={request.items || []}
-                showActions="issue"
-                onIssue={handleMarkAsIssued}
+                mode="view"
               />
             ))}
           </div>

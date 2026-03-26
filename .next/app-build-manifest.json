@@ -1,14 +1,9 @@
 {
   "pages": {
-    "/(dashboard)/student/browse/page": [
+    "/(auth)/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/student/browse/page.js"
-    ],
-    "/(dashboard)/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/layout.js"
+      "static/chunks/app/(auth)/login/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -16,30 +11,15 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/(dashboard)/student/request/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/student/request/page.js"
-    ],
-    "/(dashboard)/student/request/proceed/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/student/request/proceed/page.js"
-    ],
-    "/(auth)/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(auth)/login/page.js"
-    ],
     "/(dashboard)/faculty/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(dashboard)/faculty/page.js"
     ],
-    "/(dashboard)/faculty/approvals/page": [
+    "/(dashboard)/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/faculty/approvals/page.js"
+      "static/chunks/app/(dashboard)/layout.js"
     ],
     "/(dashboard)/faculty/issued/page": [
       "static/chunks/webpack.js",
@@ -51,25 +31,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(dashboard)/faculty/returns/page.js"
     ],
-    "/(dashboard)/student/page": [
+    "/(dashboard)/faculty/approvals/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/student/page.js"
-    ],
-    "/(dashboard)/student/requests/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/student/requests/page.js"
-    ],
-    "/(dashboard)/student/fines/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/student/fines/page.js"
-    ],
-    "/_not-found/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/(dashboard)/faculty/approvals/page.js"
     ]
   }
 }

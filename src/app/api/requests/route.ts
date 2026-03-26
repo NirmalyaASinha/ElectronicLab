@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     // Get all requests (or filtered by student if role is STUDENT)
-    let query = db
+    let baseQuery = db
       .select({
         id: issueRequests.id,
         studentId: issueRequests.studentId,
@@ -31,11 +31,9 @@ export async function GET() {
       .from(issueRequests)
       .innerJoin(users, eq(issueRequests.studentId, users.id));
 
-    if (session.user.role === 'STUDENT') {
-      query = query.where(eq(issueRequests.studentId, session.user.id));
-    }
-
-    const requestsData = await query.orderBy(desc(issueRequests.createdAt));
+    const requestsData = await (session.user.role === 'STUDENT'
+      ? baseQuery.where(eq(issueRequests.studentId, session.user.id)).orderBy(desc(issueRequests.createdAt))
+      : baseQuery.orderBy(desc(issueRequests.createdAt)));
 
     // Fetch items for each request
     const requestsWithItems = await Promise.all(

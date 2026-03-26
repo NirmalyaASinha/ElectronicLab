@@ -153,7 +153,7 @@ export async function POST(
 
       await db.insert(notifications).values({
         userId: currentRequest.studentId,
-        type: 'COMPONENTS_RETURNED',
+        type: 'RETURN_CONFIRMED',
         title: 'Components Returned',
         message: `${totalReturned} component(s) have been received and processed.${
           allItemsReturned ? ' All components have been returned.' : ''
