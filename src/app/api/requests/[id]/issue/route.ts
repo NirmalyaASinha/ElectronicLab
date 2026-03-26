@@ -63,8 +63,7 @@ export async function POST(
       const now = new Date();
       // Default to 7 days if not specified
       const durationDays = 7;
-      const dueDate = new Date(now);
-      dueDate.setDate(dueDate.getDate() + durationDays);
+      const dueDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
       // Step 1: Verify quantities and decrement
       for (const item of requestItems) {

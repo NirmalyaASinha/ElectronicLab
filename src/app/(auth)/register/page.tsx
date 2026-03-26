@@ -18,8 +18,58 @@ export default function RegisterPage() {
     employeeId: '',
     semester: '',
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 1rem 1.5rem;
+      background-color: ${type === 'success' ? '#10b981' : '#ef4444'};
+      color: white;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      z-index: 9999;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 300);
+    }, 3000);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -30,7 +80,6 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
@@ -40,7 +89,7 @@ export default function RegisterPage() {
       });
 
       if (!validation.success) {
-        setError('Please fill all required fields correctly');
+        showNotification('Please fill all required fields correctly', 'error');
         setLoading(false);
         return;
       }
@@ -54,14 +103,17 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Registration failed');
+        showNotification(data.error || 'Registration failed', 'error');
         setLoading(false);
         return;
       }
 
-      router.push('/login');
+      showNotification('Account created successfully!', 'success');
+      setTimeout(() => {
+        router.push('/login');
+      }, 1500);
     } catch {
-      setError('Registration failed. Please try again.');
+      showNotification('Registration failed. Please try again.', 'error');
       setLoading(false);
     }
   };
@@ -246,21 +298,6 @@ export default function RegisterPage() {
                 placeholder="FAC123456"
                 disabled={loading}
               />
-            </div>
-          )}
-
-          {error && (
-            <div
-              style={{
-                backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                color: 'var(--danger)',
-                padding: '0.75rem',
-                borderRadius: 'var(--radius)',
-                marginBottom: '1rem',
-                fontSize: '0.875rem',
-              }}
-            >
-              {error}
             </div>
           )}
 
