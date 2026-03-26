@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { DashboardTopBar } from '@/components/dashboard/DashboardTopBar';
 
 export default function DashboardLayout({
   children,
@@ -270,6 +271,7 @@ export default function DashboardLayout({
           overflow: 'auto',
         }}
       >
+        {role === 'STUDENT' && <DashboardTopBar />}
         {children}
       </main>
     </div>

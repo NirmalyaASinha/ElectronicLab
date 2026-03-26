@@ -1,1 +1,0 @@
-{"version":1,"functions":{"/api/auth/[...nextauth]":{},"/admin/analytics":{},"/admin/users":{},"/admin":{},"/faculty/approvals":{},"/faculty/issued":{},"/faculty/returns":{},"/student/fines":{},"/faculty":{},"/student":{},"/student/requests":{},"/student/browse":{},"/":{},"/admin/inventory":{}}}

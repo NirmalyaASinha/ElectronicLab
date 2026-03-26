@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { PageTransition, StaggerContainer, StaggerItem } from '@/components/dashboard/PageTransition';
-import { Search } from 'lucide-react';
+import { useRequestStore } from '@/store/requestStore';
+import { Search, Plus, Check } from 'lucide-react';
 
 interface Component {
   id: string;
@@ -14,11 +16,15 @@ interface Component {
   quantityTotal: number;
   status: string;
   imageUrl?: string;
+  maxIssueQuantity: number;
+  maxIssueDays: number;
 }
 
 export const dynamic = 'force-dynamic';
 
 export default function BrowseComponents() {
+  const router = useRouter();
+  const store = useRequestStore();
   const [components, setComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -26,10 +32,22 @@ export default function BrowseComponents() {
   const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchComponents();
-  }, [search, category]);
+    const fetchAllCategories = async () => {
+      try {
+        const res = await fetch('/api/components');
+        const data = await res.json();
+        if (data.data) {
+          const uniqueCategories = [...new Set(data.data.map((c: Component) => c.category))];
+          setCategories(uniqueCategories as string[]);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchAllCategories();
+  }, []);
 
-  const fetchComponents = async () => {
+  const fetchComponents = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -41,16 +59,17 @@ export default function BrowseComponents() {
       
       if (data.data) {
         setComponents(data.data);
-        // Extract unique categories
-        const uniqueCategories = [...new Set(data.data.map((c: Component) => c.category))];
-        setCategories(uniqueCategories as string[]);
       }
     } catch (error) {
       console.error('Error fetching components:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, category]);
+
+  useEffect(() => {
+    fetchComponents();
+  }, [fetchComponents]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -63,6 +82,43 @@ export default function BrowseComponents() {
       default:
         return 'bg-[var(--text-secondary)] text-white';
     }
+  };
+
+  const handleAddToRequest = (component: Component) => {
+    if (component.status === 'OUT_OF_STOCK') {
+      alert('This component is out of stock');
+      return;
+    }
+    
+    const existing = store.getItem(component.id);
+    
+    if (existing) {
+      // Item already exists, increment quantity
+      if (existing.quantity < existing.maxQuantity) {
+        store.updateQuantity(component.id, existing.quantity + 1);
+      } else {
+        alert(`Maximum quantity (${existing.maxQuantity}) reached for this component`);
+      }
+    } else {
+      // New item, add it
+      store.addItem({
+        componentId: component.id,
+        name: component.name,
+        category: component.category,
+        quantity: 1,
+        maxQuantity: component.maxIssueQuantity,
+        maxDays: component.maxIssueDays,
+      });
+    }
+  };
+
+  const isInRequest = (componentId: string) => {
+    return store.getItem(componentId) !== null;
+  };
+
+  const getItemQuantity = (componentId: string) => {
+    const item = store.getItem(componentId);
+    return item?.quantity || 0;
   };
 
   return (
@@ -86,22 +142,38 @@ export default function BrowseComponents() {
               placeholder="Search by name or model number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)]"
+              className="w-full pl-10 pr-4 py-3 bg-[var(--bg-base)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] transition-colors"
             />
           </div>
 
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-4 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+          <div>
+            <p className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Categories</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setCategory('')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  category === ''
+                    ? 'bg-[var(--accent)] text-white'
+                    : 'bg-[var(--bg-base)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+                }`}
+              >
+                All Categories
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    category === cat
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'bg-[var(--bg-base)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Components Grid */}
@@ -116,61 +188,77 @@ export default function BrowseComponents() {
         ) : (
           <StaggerContainer staggerDelay={0.05}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {components.map((component) => (
-                <StaggerItem key={component.id}>
-                  <div className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-all duration-300 group cursor-pointer h-full flex flex-col">
-                    {/* Image placeholder */}
-                    <div className="w-full h-32 bg-[var(--bg-elevated)] rounded-lg mb-4 flex items-center justify-center group-hover:bg-[var(--accent-glow)] transition-colors">
-                      {component.imageUrl ? (
-                        <img
-                          src={component.imageUrl}
-                          alt={component.name}
-                          className="w-full h-full object-contain p-2"
-                        />
-                      ) : (
-                        <span className="text-4xl">📦</span>
-                      )}
-                    </div>
+              {components.map((component) => {
+                const inRequest = isInRequest(component.id);
+                const quantity = getItemQuantity(component.id);
 
-                    {/* Content */}
-                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1 group-hover:text-[var(--accent)] transition-colors">
-                      {component.name}
-                    </h3>
+                return (
+                  <StaggerItem key={component.id}>
+                    <div className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-all duration-300 group cursor-pointer h-full flex flex-col">
+                      {/* Image placeholder */}
+                      <div className="w-full h-32 bg-[var(--bg-elevated)] rounded-lg mb-4 flex items-center justify-center group-hover:bg-[var(--accent-glow)] transition-colors">
+                        {component.imageUrl ? (
+                          <img
+                            src={component.imageUrl}
+                            alt={component.name}
+                            className="w-full h-full object-contain p-2"
+                          />
+                        ) : (
+                          <span className="text-4xl">📦</span>
+                        )}
+                      </div>
 
-                    <p className="text-sm text-[var(--text-secondary)] mb-3 flex-grow">
-                      {component.description || 'No description available'}
-                    </p>
+                      {/* Content */}
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1 group-hover:text-[var(--accent)] transition-colors">
+                        {component.name}
+                      </h3>
 
-                    {/* Details */}
-                    <div className="space-y-2 mb-4 text-sm">
-                      {component.modelNumber && (
+                      <p className="text-sm text-[var(--text-secondary)] mb-3 flex-grow">
+                        {component.description || 'No description available'}
+                      </p>
+
+                      {/* Details */}
+                      <div className="space-y-2 mb-4 text-sm">
+                        {component.modelNumber && (
+                          <p className="text-[var(--text-secondary)]">
+                            <span className="text-[var(--text-muted)]">Model:</span> {component.modelNumber}
+                          </p>
+                        )}
                         <p className="text-[var(--text-secondary)]">
-                          <span className="text-[var(--text-muted)]">Model:</span> {component.modelNumber}
+                          <span className="text-[var(--text-muted)]">Category:</span> {component.category}
                         </p>
-                      )}
-                      <p className="text-[var(--text-secondary)]">
-                        <span className="text-[var(--text-muted)]">Category:</span> {component.category}
-                      </p>
-                      <p className="text-[var(--text-secondary)]">
-                        <span className="text-[var(--text-muted)]">Available:</span>{' '}
-                        <span className="font-semibold text-[var(--accent)]">
-                          {component.quantityAvailable}/{component.quantityTotal}
-                        </span>
-                      </p>
-                    </div>
+                        <p className="text-[var(--text-secondary)]">
+                          <span className="text-[var(--text-muted)]">Available:</span>{' '}
+                          <span className="font-semibold text-[var(--accent)]">
+                            {component.quantityAvailable}/{component.quantityTotal}
+                          </span>
+                        </p>
+                      </div>
 
-                    {/* Status Badge */}
-                    <div className="flex items-center justify-between">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(component.status)}`}>
-                        {component.status}
-                      </span>
-                      <button className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-opacity-90 transition-all text-sm font-medium">
-                        Request
-                      </button>
+                      {/* Status Badge & Action Button */}
+                      <div className="flex items-center justify-between">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(component.status)}`}>
+                          {component.status}
+                        </span>
+                        <button
+                          onClick={() => handleAddToRequest(component)}
+                          disabled={component.status === 'OUT_OF_STOCK'}
+                          className={`px-4 py-2 rounded-lg transition-all text-sm font-medium flex items-center gap-2 ${
+                            component.status === 'OUT_OF_STOCK'
+                              ? 'bg-[var(--text-muted)] text-[var(--text-secondary)] cursor-not-allowed'
+                              : inRequest
+                              ? 'bg-[var(--success)] text-white hover:bg-opacity-90'
+                              : 'bg-[var(--accent)] text-white hover:bg-opacity-90'
+                          }`}
+                        >
+                          {inRequest ? <Check size={16} /> : <Plus size={16} />}
+                          <span>Request {quantity > 0 ? `• ${quantity}` : ''}</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </StaggerItem>
-              ))}
+                  </StaggerItem>
+                );
+              })}
             </div>
           </StaggerContainer>
         )}
