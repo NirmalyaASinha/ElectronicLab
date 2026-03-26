@@ -82,37 +82,61 @@ export default function DashboardLayout({
             gap: sidebarOpen ? '0.75rem' : '0',
           }}
         >
-          {sidebarOpen && (
-            <Image
-              src="/RRU.png"
-              alt="RRU Logo"
-              width={40}
-              height={40}
-              style={{ objectFit: 'contain' }}
-            />
-          )}
-          {sidebarOpen && (
-            <h2
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                fontSize: '0.875rem',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              E-Lab
-            </h2>
-          )}
-          {sidebarOpen && (
-            <Image
-              src="/SASET.png"
-              alt="SASET Logo"
-              width={40}
-              height={40}
-              style={{ objectFit: 'contain' }}
-            />
-          )}
+          <button
+            onClick={() => {
+              const dashboardPath = role === 'STUDENT' ? '/student' : role === 'FACULTY' ? '/faculty' : '/admin';
+              router.push(dashboardPath);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: sidebarOpen ? '0.5rem' : '0',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent-glow)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            {sidebarOpen && (
+              <Image
+                src="/RRU.png"
+                alt="RRU Logo"
+                width={40}
+                height={40}
+                style={{ objectFit: 'contain' }}
+              />
+            )}
+            {sidebarOpen && (
+              <h2
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  fontSize: '0.875rem',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                E-Lab
+              </h2>
+            )}
+            {sidebarOpen && (
+              <Image
+                src="/SASET.png"
+                alt="SASET Logo"
+                width={40}
+                height={40}
+                style={{ objectFit: 'contain' }}
+              />
+            )}
+          </button>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{

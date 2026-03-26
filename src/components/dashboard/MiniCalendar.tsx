@@ -65,41 +65,41 @@ export function MiniCalendar({ dueDates = [] }: MiniCalendarProps) {
   if (!mounted) return null;
 
   return (
-    <div className="rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-[var(--text-primary)]">{monthName}</h3>
-        <div className="flex gap-2">
+    <div className="rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] p-3 max-w-xs">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-[var(--text-primary)] text-sm">{monthName}</h3>
+        <div className="flex gap-1">
           <button
             onClick={prevMonth}
-            className="p-1 hover:bg-[var(--bg-surface)] rounded transition-colors"
+            className="p-0.5 hover:bg-[var(--bg-surface)] rounded transition-colors text-xs"
             aria-label="Previous month"
           >
-            <ChevronLeft size={18} className="text-[var(--text-secondary)]" />
+            <ChevronLeft size={14} className="text-[var(--text-secondary)]" />
           </button>
           <button
             onClick={nextMonth}
-            className="p-1 hover:bg-[var(--bg-surface)] rounded transition-colors"
+            className="p-0.5 hover:bg-[var(--bg-surface)] rounded transition-colors text-xs"
             aria-label="Next month"
           >
-            <ChevronRight size={18} className="text-[var(--text-secondary)]" />
+            <ChevronRight size={14} className="text-[var(--text-secondary)]" />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2 text-center mb-2">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+      <div className="grid grid-cols-7 gap-1 text-center mb-2">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
           <div key={day} className="text-xs font-medium text-[var(--text-secondary)]">
             {day}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5">
         {days.map((day, index) => (
           <motion.div
             key={index}
             whileHover={day ? { scale: 1.05 } : {}}
-            className={`aspect-square flex items-center justify-center text-sm rounded relative group ${
+            className={`h-6 flex items-center justify-center text-xs rounded relative group ${
               day === null
                 ? ''
                 : isToday(day)
@@ -111,20 +111,20 @@ export function MiniCalendar({ dueDates = [] }: MiniCalendarProps) {
           >
             {day}
             {day && isDueDate(day) && !isToday(day) && (
-              <div className="absolute bottom-0 w-1 h-1 bg-[var(--danger)] rounded-full" />
+              <div className="absolute bottom-0.5 w-0.5 h-0.5 bg-[var(--danger)] rounded-full" />
             )}
           </motion.div>
         ))}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-[var(--border)] text-xs space-y-2">
+      <div className="mt-2 pt-2 border-t border-[var(--border)] text-xs space-y-1">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-          <span className="text-[var(--text-secondary)]">Today</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+          <span className="text-[var(--text-secondary)] text-xs">Today</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-[var(--warning)]" />
-          <span className="text-[var(--text-secondary)]">Due Date</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
+          <span className="text-[var(--text-secondary)] text-xs">Due Date</span>
         </div>
       </div>
     </div>
