@@ -29,6 +29,7 @@ export interface RequestListItem {
   studentRoll: string;
   studentDept: string;
   studentEmail?: string;
+  facultyId?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ISSUED' | 'RETURNED' | 'OVERDUE' | 'CANCELLED';
   purpose: string;
   requestedAt: string;

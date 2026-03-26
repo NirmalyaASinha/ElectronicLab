@@ -117,6 +117,7 @@ export default function RequestDetailPage() {
   );
 
   const faculty: FacultySummary | null = useMemo(() => {
+    // For FACULTY users, show their own info
     if (role === 'FACULTY' && session?.user?.name) {
       return {
         name: session.user.name,
@@ -125,10 +126,27 @@ export default function RequestDetailPage() {
       };
     }
 
+    // For ADMIN users, no faculty summary needed
     if (role === 'ADMIN') {
       return null;
     }
 
+    // For STUDENT users, find the faculty assigned to this specific request
+    if (role === 'STUDENT' && request) {
+      const requestFacultyId = request.facultyId;
+      if (requestFacultyId && facultyList.length > 0) {
+        const assignedFaculty = facultyList.find(fac => fac.id === requestFacultyId);
+        if (assignedFaculty) {
+          return {
+            name: assignedFaculty.name,
+            department: assignedFaculty.department,
+            email: assignedFaculty.email,
+          };
+        }
+      }
+    }
+
+    // Fallback to first faculty if no match found
     const firstFaculty = facultyList[0];
     return firstFaculty
       ? {
@@ -137,7 +155,7 @@ export default function RequestDetailPage() {
           email: firstFaculty.email,
         }
       : null;
-  }, [facultyList, role, session]);
+  }, [facultyList, role, session, request]);
 
   const refreshRequests = async () => {
     const response = await fetch('/api/requests', { cache: 'no-store' });

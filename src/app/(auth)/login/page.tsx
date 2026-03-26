@@ -76,6 +76,7 @@ export default function LoginPage() {
         return;
       }
 
+      // First, verify credentials with NextAuth
       const result = await signIn('credentials', {
         email,
         password,
@@ -88,24 +89,22 @@ export default function LoginPage() {
         return;
       }
 
-      // Get session to determine role-based redirect
-      const sessionRes = await fetch('/api/auth/session');
-      const session = await sessionRes.json();
+      // If credentials are valid, send OTP
+      const otpRes = await fetch('/api/auth/send-login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
 
-      if (session?.user?.role) {
-        showNotification('Login successful!', 'success');
-        const redirectPath =
-          session.user.role === 'STUDENT'
-            ? '/student'
-            : session.user.role === 'FACULTY'
-              ? '/faculty'
-              : '/admin';
+      const otpData = await otpRes.json();
+
+      if (otpRes.ok) {
+        showNotification('OTP sent to your email!', 'success');
         setTimeout(() => {
-          router.replace(redirectPath);
-        }, 500);
+          router.push(`/verify-otp?email=${encodeURIComponent(email)}&flow=login`);
+        }, 1500);
       } else {
-        showNotification('Login successful but role not found', 'error');
-        setLoading(false);
+        showNotification(otpData.error || 'Failed to send OTP', 'error');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -241,6 +240,19 @@ export default function LoginPage() {
                 color: 'var(--text-primary)',
               }}
             />
+            <div style={{ marginTop: '0.5rem', textAlign: 'right' }}>
+              <Link
+                href="/forgot-password"
+                style={{
+                  fontSize: '0.875rem',
+                  color: 'var(--accent)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button
