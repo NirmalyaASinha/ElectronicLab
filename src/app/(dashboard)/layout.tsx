@@ -36,16 +36,19 @@ export default function DashboardLayout({
       { label: 'Browse', href: '/student/browse', icon: '📦' },
       { label: 'My Requests', href: '/student/requests', icon: '📋' },
       { label: 'My Fines', href: '/student/fines', icon: '⚠️' },
+      { label: 'Profile', href: '/profile', icon: '👤' },
     ],
     FACULTY: [
       { label: 'Approvals', href: '/faculty/approvals', icon: '✅' },
       { label: 'Issued', href: '/faculty/issued', icon: '📤' },
       { label: 'Returns', href: '/faculty/returns', icon: '📥' },
+      { label: 'Profile', href: '/profile', icon: '👤' },
     ],
     ADMIN: [
       { label: 'Inventory', href: '/admin/inventory', icon: '🏭' },
       { label: 'Users', href: '/admin/users', icon: '👥' },
       { label: 'Analytics', href: '/admin/analytics', icon: '📊' },
+      { label: 'Profile', href: '/profile', icon: '👤' },
     ],
   };
 
@@ -98,7 +101,7 @@ export default function DashboardLayout({
                 whiteSpace: 'nowrap',
               }}
             >
-              ElectraLab
+              E-Lab
             </h2>
           )}
           {sidebarOpen && (

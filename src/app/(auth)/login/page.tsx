@@ -54,7 +54,7 @@ export default function LoginPage() {
       } else {
         router.replace('/dashboard');
       }
-    } catch (err) {
+    } catch {
       setError('Login failed. Please try again.');
       setLoading(false);
     }
@@ -116,7 +116,7 @@ export default function LoginPage() {
             color: 'var(--text-primary)',
           }}
         >
-          ElecTronic Lab
+          Electra Lab
         </h1>
         <p
           style={{

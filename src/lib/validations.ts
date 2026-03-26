@@ -16,6 +16,26 @@ export const LoginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const UpdatePersonalInfoSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  department: z.string().min(2, 'Department must be at least 2 characters'),
+});
+
+export const UpdatePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(100),
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+export const UpdateAcademicInfoSchema = z.object({
+  rollNumber: z.string().optional(),
+  semester: z.number().min(1).max(8).optional(),
+  employeeId: z.string().optional(),
+});
+
 export const CreateRequestSchema = z.object({
   purpose: z
     .string()
@@ -58,6 +78,9 @@ export const CreateFineSchema = z.object({
 
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
+export type UpdatePersonalInfoInput = z.infer<typeof UpdatePersonalInfoSchema>;
+export type UpdatePasswordInput = z.infer<typeof UpdatePasswordSchema>;
+export type UpdateAcademicInfoInput = z.infer<typeof UpdateAcademicInfoSchema>;
 export type CreateRequestInput = z.infer<typeof CreateRequestSchema>;
 export type ApproveRequestInput = z.infer<typeof ApproveRequestSchema>;
 export type ProcessReturnInput = z.infer<typeof ProcessReturnSchema>;
