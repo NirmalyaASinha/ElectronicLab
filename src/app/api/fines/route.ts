@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const session = await auth();
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     // STUDENT sees only their own fines; FACULTY/ADMIN see all
@@ -22,11 +22,11 @@ export async function GET() {
 
     const finesList = await finalQuery.orderBy(desc(fines.createdAt));
 
-    return NextResponse.json({ data: finesList });
+    return NextResponse.json({ success: true, data: finesList });
   } catch (error) {
     console.error('Fines fetch error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

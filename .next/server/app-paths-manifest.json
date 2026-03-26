@@ -1,13 +1,11 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/requests/route": "app/api/requests/route.js",
   "/api/components/route": "app/api/components/route.js",
-  "/api/faculty/route": "app/api/faculty/route.js",
-  "/(dashboard)/student/browse/page": "app/(dashboard)/student/browse/page.js",
-  "/(dashboard)/student/request/page": "app/(dashboard)/student/request/page.js",
-  "/(dashboard)/student/request/proceed/page": "app/(dashboard)/student/request/proceed/page.js",
+  "/api/requests/route": "app/api/requests/route.js",
   "/(dashboard)/faculty/approvals/page": "app/(dashboard)/faculty/approvals/page.js",
-  "/(dashboard)/student/page": "app/(dashboard)/student/page.js",
-  "/(dashboard)/student/requests/page": "app/(dashboard)/student/requests/page.js"
+  "/(dashboard)/student/fines/page": "app/(dashboard)/student/fines/page.js",
+  "/(dashboard)/faculty/page": "app/(dashboard)/faculty/page.js",
+  "/(dashboard)/faculty/components/page": "app/(dashboard)/faculty/components/page.js"
 }
