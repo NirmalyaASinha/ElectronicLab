@@ -6,9 +6,11 @@ import { ilike } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 // Derive a sane NEXTAUTH_URL at runtime so Vercel deployments don't fall back to localhost
+// Prefer the deployed host (VERCEL_URL) over any checked-in NEXTAUTH_URL to avoid localhost leaks in prod
 const computedNextAuthUrl =
-  process.env.NEXTAUTH_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
 
 // Ensure NextAuth sees the correct host
 process.env.NEXTAUTH_URL = computedNextAuthUrl;
