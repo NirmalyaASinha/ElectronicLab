@@ -104,7 +104,6 @@ src/
 │   └── index.ts            # Database connection
 ├── lib/
 │   ├── auth.ts             # NextAuth configuration
-│   ├── otp.ts              # OTP utilities
 │   ├── validations.ts      # Zod validation schemas
 │   └── fine-calculator.ts  # Fine calculation logic
 └── types/
@@ -178,10 +177,8 @@ src/
 ## 🔌 API Endpoints
 
 ### Authentication
-- `POST /api/auth/login-step1` - Email validation
-- `POST /api/auth/login-step2` - Password verification
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/resend-otp` - Resend OTP
+- `POST /api/auth/[...nextauth]` - NextAuth credentials sign-in
+- `POST /api/admin/create-user` - Admin creates users
 
 ### Requests
 - `GET /api/requests` - Fetch user's requests

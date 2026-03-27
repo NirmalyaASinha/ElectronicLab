@@ -5,10 +5,11 @@
  * This ensures bcryptjs hashing is compatible with NextAuth authentication
  */
 
-import { createClient } from '@vercel/postgres';
-import bcryptjs from 'bcryptjs';
-import { randomUUID } from 'crypto';
-import readline from 'readline';
+require('dotenv').config({ path: '.env.local' });
+const { createClient } = require('@vercel/postgres');
+const bcryptjs = require('bcryptjs');
+const { randomUUID } = require('crypto');
+const readline = require('readline');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -17,7 +18,9 @@ const rl = readline.createInterface({
 
 const question = (prompt) => new Promise((resolve) => rl.question(prompt, resolve));
 
-const db = createClient();
+const db = createClient({
+  connectionString: process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL,
+});
 
 async function connect() {
   try {
@@ -38,6 +41,7 @@ async function createAdmin(email, name, password) {
   try {
     const passwordHash = await hashPassword(password);
     const id = randomUUID();
+    email = email.toLowerCase();
 
     const result = await db.query(
       `INSERT INTO users (id, email, name, password_hash, role, department, is_active)
@@ -66,6 +70,7 @@ async function createFaculty(email, name, password, department, employeeId) {
   try {
     const passwordHash = await hashPassword(password);
     const id = randomUUID();
+    email = email.toLowerCase();
 
     await db.query(
       `INSERT INTO users (id, email, name, password_hash, role, department, employee_id, is_active)
@@ -85,6 +90,7 @@ async function createStudent(email, name, password, department, rollNumber, seme
   try {
     const passwordHash = await hashPassword(password);
     const id = randomUUID();
+    email = email.toLowerCase();
 
     await db.query(
       `INSERT INTO users (id, email, name, password_hash, role, department, roll_number, semester, is_active)

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Providers } from './providers';
-import { AppwritePing } from '@/components/AppwritePing';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -19,7 +18,6 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>{children}</Providers>
-        <AppwritePing />
       </body>
     </html>
   );

@@ -34,18 +34,6 @@ Key: DATABASE_URL
 Value: postgresql://neondb_owner:npg_tRekZhguVW71@ep-flat-dust-a1hd05go-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
 
-#### **4. RESEND_API_KEY** (Optional - for email)
-```
-Key: RESEND_API_KEY
-Value: re_PnZ2CndM_HHj8kLSUnwitytD2jSLUrZQq
-```
-
-#### **5. FROM_EMAIL** (Optional - for email)
-```
-Key: FROM_EMAIL
-Value: onboarding@resend.dev
-```
-
 ---
 
 ### **Step 3: Redeploy**

@@ -2,7 +2,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { ilike } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -21,11 +21,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null;
           }
 
-          const email = (credentials.email as string).toLowerCase();
+          const email = (credentials.email as string).trim().toLowerCase();
           console.log('[Auth] Attempting to authorize user with email:', email);
 
           const user = await db.query.users.findFirst({
-            where: eq(users.email, email),
+            where: ilike(users.email, email),
           });
 
           if (!user) {

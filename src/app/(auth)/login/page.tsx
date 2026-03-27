@@ -61,7 +61,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const validation = LoginSchema.safeParse({ email, password });
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedPassword = password.trim();
+
+      const validation = LoginSchema.safeParse({
+        email: normalizedEmail,
+        password: normalizedPassword,
+      });
 
       if (!validation.success) {
         setError('Invalid email or password');
@@ -70,31 +76,21 @@ export default function LoginPage() {
       }
 
       const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+        email: normalizedEmail,
+        password: normalizedPassword,
+        redirect: true,
+        callbackUrl: '/',
       });
 
-      if (!result?.ok || result.error) {
+      if (result?.error) {
         setError('Invalid email or password');
         showNotification('Invalid email or password', 'error');
         setLoading(false);
         return;
       }
 
-      const sessionRes = await fetch('/api/auth/session');
-      const session = await sessionRes.json();
-
-      if (session?.user?.role) {
-        showNotification('Login successful!', 'success');
-        const redirectPath =
-          session.user.role === 'STUDENT'
-            ? '/student'
-            : session.user.role === 'FACULTY'
-              ? '/faculty'
-              : '/admin';
-        setTimeout(() => router.push(redirectPath), 1000);
-      }
+      // NextAuth will handle the redirect; show quick feedback
+      showNotification('Login successful!', 'success');
     } catch {
       setError('Login failed. Please try again.');
       showNotification('Login failed. Please try again.', 'error');

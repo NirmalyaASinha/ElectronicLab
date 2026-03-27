@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
 
 const CreateUserSchema = z.object({
   email: z.string().email(),
