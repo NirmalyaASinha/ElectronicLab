@@ -30,6 +30,24 @@ export default function BrowseComponents() {
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
 
+  const templates = [
+    {
+      name: 'Project Starter Kit',
+      keywords: ['arduino', 'breadboard', 'sensor', 'jumper', 'resistor'],
+      description: 'Common items used in first-stage project builds.',
+    },
+    {
+      name: 'Measurement Kit',
+      keywords: ['multimeter', 'oscilloscope', 'power supply', 'probe'],
+      description: 'Tools useful for testing and troubleshooting.',
+    },
+    {
+      name: 'Prototype Kit',
+      keywords: ['led', 'wire', 'breadboard', 'module', 'motor'],
+      description: 'A lightweight kit for rapid prototype assembly.',
+    },
+  ];
+
   useEffect(() => {
     const fetchAllCategories = async () => {
       try {
@@ -120,6 +138,29 @@ export default function BrowseComponents() {
     return item?.quantity || 0;
   };
 
+  const applyTemplate = (templateKeywords: string[]) => {
+    const matchedComponents = components.filter((component) => {
+      const haystack = `${component.name} ${component.category} ${component.description ?? ''}`.toLowerCase();
+      return templateKeywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
+    });
+
+    if (matchedComponents.length === 0) {
+      alert('No matching components found for this template in the current list.');
+      return;
+    }
+
+    matchedComponents.slice(0, 5).forEach((component) => {
+      store.addItem({
+        componentId: component.id,
+        name: component.name,
+        category: component.category,
+        quantity: 1,
+        maxQuantity: component.maxIssueQuantity,
+        maxDays: component.maxIssueDays,
+      });
+    });
+  };
+
   return (
     <PageTransition>
       <div className="space-y-6">
@@ -172,6 +213,49 @@ export default function BrowseComponents() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Request Templates */}
+        <div className="space-y-4 p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)]">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-1">Request Templates</h2>
+            <p className="text-sm text-[var(--text-secondary)]">Quickly prefill common component bundles</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {templates.map((template) => (
+              <button
+                key={template.name}
+                type="button"
+                onClick={() => applyTemplate(template.keywords)}
+                className="text-left p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent)] transition-all"
+              >
+                <h3 className="font-semibold text-[var(--text-primary)] mb-1">{template.name}</h3>
+                <p className="text-sm text-[var(--text-secondary)]">{template.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Recommendations */}
+        <div className="space-y-4 p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)]">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-1">Recommended Components</h2>
+            <p className="text-sm text-[var(--text-secondary)]">Popular and available items worth checking first</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {components
+              .filter((component) => component.status !== 'OUT_OF_STOCK')
+              .slice(0, 3)
+              .map((component) => (
+                <div key={component.id} className="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]">
+                  <h3 className="font-semibold text-[var(--text-primary)]">{component.name}</h3>
+                  <p className="text-sm text-[var(--text-secondary)] mt-1">{component.category}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-3">
+                    Available {component.quantityAvailable}/{component.quantityTotal} · Max {component.maxIssueDays} days
+                  </p>
+                </div>
+              ))}
           </div>
         </div>
 

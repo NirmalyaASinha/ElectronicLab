@@ -3,4 +3,5 @@ export * from './components';
 export * from './requests';
 export * from './fines';
 export * from './notifications';
+export * from './lab-access';
 export * from './audit';

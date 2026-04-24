@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Package } from 'lucide-react';
+import { Download, Package } from 'lucide-react';
 import {
   RequestGridCard,
   RequestGridSkeleton,
@@ -56,6 +56,36 @@ export default function StudentRequestsPage() {
     return requests.filter((request) => request.status === activeTab);
   }, [activeTab, requests]);
 
+  const exportRequests = () => {
+    const rows = [
+      ['Request ID', 'Student', 'Purpose', 'Status', 'Requested At', 'Due At', 'Returned At', 'Items'],
+      ...filteredRequests.map((request) => [
+        request.id,
+        request.studentName,
+        request.purpose,
+        request.status,
+        request.requestedAt,
+        request.dueAt || '',
+        request.returnedAt || '',
+        request.items.map((item) => `${item.name} x${item.quantity}`).join('; '),
+      ]),
+    ];
+
+    const csv = rows
+      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `request-history-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="animate-page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
@@ -71,26 +101,49 @@ export default function StudentRequestsPage() {
         </div>
       ) : null}
 
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: '1px solid var(--border)',
-              backgroundColor: activeTab === tab.key ? 'var(--accent)' : 'var(--bg-surface)',
-              color: activeTab === tab.key ? 'white' : 'var(--text-secondary)',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: '1px solid var(--border)',
+                backgroundColor: activeTab === tab.key ? 'var(--accent)' : 'var(--bg-surface)',
+                color: activeTab === tab.key ? 'white' : 'var(--text-secondary)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={exportRequests}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            borderRadius: '12px',
+            border: '1px solid var(--border)',
+            backgroundColor: 'var(--bg-surface)',
+            color: 'var(--text-primary)',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <Download size={16} />
+          Export History
+        </button>
       </div>
 
       {loading ? (
