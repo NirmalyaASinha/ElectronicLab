@@ -23,6 +23,11 @@ interface DueDateEntry {
     category: string;
     quantity: number;
   }>;
+  fines?: Array<{
+    studentName: string;
+    amount: number;
+    status: string;
+  }>;
 }
 
 interface DueDatesApiResponse {
@@ -30,9 +35,11 @@ interface DueDatesApiResponse {
   data?: DueDateEntry[];
 }
 
+const EMPTY_DUE_DATES: Date[] = [];
 const getDateKey = (date: Date) => date.toISOString().split('T')[0];
 
-export function MiniCalendar({ dueDates = [] }: LegacyDueDateProp) {
+export function MiniCalendar({ dueDates }: LegacyDueDateProp) {
+  const fallbackDueDates = dueDates ?? EMPTY_DUE_DATES;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [entries, setEntries] = useState<DueDateEntry[]>([]);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
@@ -60,7 +67,7 @@ export function MiniCalendar({ dueDates = [] }: LegacyDueDateProp) {
       }
 
       setEntries(
-        dueDates.map((date, index) => ({
+        fallbackDueDates.map((date, index) => ({
           date: getDateKey(date),
           requestId: `legacy-${index}`,
           label: 'Due item',
@@ -75,7 +82,7 @@ export function MiniCalendar({ dueDates = [] }: LegacyDueDateProp) {
     void loadDueDates();
 
     return () => controller.abort();
-  }, [dueDates]);
+  }, [fallbackDueDates]);
 
   const groupedEntries = useMemo(() => {
     const grouped = new Map<string, DueDateEntry[]>();
@@ -179,65 +186,112 @@ export function MiniCalendar({ dueDates = [] }: LegacyDueDateProp) {
           );
           const isSelected = selectedDateKey === dateKey;
 
+          // Gather all fines for this day
+          const fines: Array<{ studentName: string; amount: number; status: string }> = [];
+          dayEntries.forEach(entry => {
+            if (entry.fines && entry.fines.length > 0) {
+              entry.fines.forEach(fine => fines.push(fine));
+            }
+          });
+
           return (
-            <button
-              key={dateKey}
-              type="button"
-              onClick={() => setSelectedDateKey(dueCount > 0 ? dateKey : null)}
-              style={{
-                height: '48px',
-                borderRadius: '12px',
-                border: isSelected ? '1px solid var(--accent)' : '1px solid transparent',
-                backgroundColor: isToday(day)
-                  ? 'var(--accent)'
-                  : isSelected
-                    ? 'var(--accent-light)'
-                    : 'transparent',
-                color: isToday(day) ? 'white' : 'var(--text-primary)',
-                position: 'relative',
-                cursor: dueCount > 0 ? 'pointer' : 'default',
-              }}
-            >
-              <span className="text-xs font-semibold">{day}</span>
-              {dueCount > 0 ? (
-                <>
-                  <span
-                    style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '999px',
-                      backgroundColor: overdueCount > 0 ? 'var(--danger)' : 'var(--warning)',
-                    }}
-                  />
-                  {dueCount > 1 ? (
+            <div key={dateKey} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedDateKey(dueCount > 0 ? dateKey : null)}
+                style={{
+                  height: '48px',
+                  width: '100%',
+                  borderRadius: '12px',
+                  border: isSelected ? '1px solid var(--accent)' : '1px solid transparent',
+                  backgroundColor: isToday(day)
+                    ? 'var(--accent)'
+                    : isSelected
+                      ? 'var(--accent-light)'
+                      : 'transparent',
+                  color: isToday(day) ? 'white' : 'var(--text-primary)',
+                  position: 'relative',
+                  cursor: dueCount > 0 ? 'pointer' : 'default',
+                }}
+                onMouseEnter={e => {
+                  const tooltip = document.getElementById(`calendar-tooltip-${dateKey}`);
+                  if (tooltip) tooltip.style.display = 'block';
+                }}
+                onMouseLeave={e => {
+                  const tooltip = document.getElementById(`calendar-tooltip-${dateKey}`);
+                  if (tooltip) tooltip.style.display = 'none';
+                }}
+              >
+                <span className="text-xs font-semibold">{day}</span>
+                {dueCount > 0 ? (
+                  <>
                     <span
                       style={{
                         position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        minWidth: '18px',
-                        height: '18px',
+                        bottom: '8px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '8px',
+                        height: '8px',
                         borderRadius: '999px',
                         backgroundColor: overdueCount > 0 ? 'var(--danger)' : 'var(--warning)',
-                        color: 'white',
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '0 4px',
                       }}
-                    >
-                      {dueCount}
-                    </span>
-                  ) : null}
-                </>
-              ) : null}
-            </button>
+                    />
+                    {dueCount > 1 ? (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          minWidth: '18px',
+                          height: '18px',
+                          borderRadius: '999px',
+                          backgroundColor: overdueCount > 0 ? 'var(--danger)' : 'var(--warning)',
+                          color: 'white',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 4px',
+                        }}
+                      >
+                        {dueCount}
+                      </span>
+                    ) : null}
+                  </>
+                ) : null}
+              </button>
+              {/* Tooltip for fines */}
+              {fines.length > 0 && (
+                <div
+                  id={`calendar-tooltip-${dateKey}`}
+                  style={{
+                    display: 'none',
+                    position: 'absolute',
+                    top: '52px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                    padding: '10px',
+                    zIndex: 100,
+                    minWidth: '180px',
+                    fontSize: '13px',
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: '6px' }}>Fines for this day</div>
+                  {fines.map((fine, idx) => (
+                    <div key={idx} style={{ marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 500 }}>{fine.studentName}</span>: ₹{fine.amount} <span style={{ color: fine.status === 'PAID' ? 'green' : fine.status === 'WAIVED' ? 'orange' : 'red' }}>({fine.status})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

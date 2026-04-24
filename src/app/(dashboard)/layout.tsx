@@ -70,20 +70,26 @@ export default function DashboardLayout({
           zIndex: 101,
         }}
       >
-        <Image
-          src="/RRU.png"
-          alt="RRU Logo"
-          width={80}
-          height={80}
-          style={{ objectFit: 'contain' }}
-        />
-        <Image
-          src="/SASET.png"
-          alt="SASET Logo"
-          width={80}
-          height={80}
-          style={{ objectFit: 'contain' }}
-        />
+        {/* Left: RRU logo links to SASET school */}
+        <a href="https://rru.ac.in/school/saset" target="_blank" rel="noopener noreferrer">
+          <Image
+            src="/RRU.png"
+            alt="RRU Logo"
+            width={80}
+            height={80}
+            style={{ objectFit: 'contain', cursor: 'pointer' }}
+          />
+        </a>
+        {/* Right: SASET logo links to RRU main site */}
+        <a href="https://rru.ac.in/" target="_blank" rel="noopener noreferrer">
+          <Image
+            src="/SASET.png"
+            alt="SASET Logo"
+            width={80}
+            height={80}
+            style={{ objectFit: 'contain', cursor: 'pointer' }}
+          />
+        </a>
       </header>
 
       <div style={{ display: 'flex', flex: 1 }}>

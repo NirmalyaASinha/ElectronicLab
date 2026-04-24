@@ -9,14 +9,18 @@ export function LiveClock() {
 
   useEffect(() => {
     setMounted(true);
-    
+
     const updateTime = () => {
       const now = new Date();
-      const istTime = new Date(now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
-      const hours = String(istTime.getHours()).padStart(2, '0');
-      const minutes = String(istTime.getMinutes()).padStart(2, '0');
-      const seconds = String(istTime.getSeconds()).padStart(2, '0');
-      setTime(`${hours}:${minutes}:${seconds}`);
+      // Use toLocaleTimeString with timeZone for robust IST time
+      const istTimeString = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      setTime(istTimeString);
     };
 
     updateTime();

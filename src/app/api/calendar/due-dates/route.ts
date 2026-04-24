@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/db';
-import { components, issueRequestItems, issueRequests, users } from '@/db/schema';
+import { components, issueRequestItems, issueRequests, users, fines } from '@/db/schema';
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 
 interface DueDateResponseItem {
@@ -18,6 +18,11 @@ interface DueDateResponseItem {
     name: string;
     category: string;
     quantity: number;
+  }>;
+  fines?: Array<{
+    studentName: string;
+    amount: number;
+    status: string;
   }>;
 }
 
@@ -83,6 +88,31 @@ export async function GET() {
       itemsByRequest.set(item.requestId, existing);
     });
 
+    // Fetch fines for all requests in this month
+    let finesByRequest: Record<string, Array<{ studentName: string; amount: number; status: string }>> = {};
+    if (requestIds.length > 0) {
+      const fineRows = await db
+        .select({
+          requestId: fines.requestId,
+          amount: fines.amount,
+          status: fines.status,
+          studentId: fines.studentId,
+          studentName: users.name,
+        })
+        .from(fines)
+        .innerJoin(users, eq(fines.studentId, users.id))
+        .where(inArray(fines.requestId, requestIds));
+      finesByRequest = fineRows.reduce((acc, fine) => {
+        if (!acc[fine.requestId]) acc[fine.requestId] = [];
+        acc[fine.requestId].push({
+          studentName: fine.studentName,
+          amount: fine.amount,
+          status: fine.status,
+        });
+        return acc;
+      }, {} as Record<string, Array<{ studentName: string; amount: number; status: string }>>);
+    }
+
     const data: DueDateResponseItem[] = baseRows.flatMap((row) => {
       if (!row.dueAt) {
         return [];
@@ -103,6 +133,7 @@ export async function GET() {
           purpose: row.purpose,
           studentName: session.user.role === 'STUDENT' ? undefined : row.studentName,
           items: itemsByRequest.get(row.id) ?? [],
+          fines: finesByRequest[row.id] || [],
         },
       ];
     });
