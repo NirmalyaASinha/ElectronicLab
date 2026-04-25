@@ -132,55 +132,44 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const tap = await db.transaction(async (tx) => {
-      const tapRow = await tx
-        .insert(labEntryTaps)
-        .values({
-          labId,
-          deviceId: device.id,
-          rfidUid,
-          rawPayload,
-          processed: false,
-        })
-        .returning({
-          id: labEntryTaps.id,
-          tappedAt: labEntryTaps.tappedAt,
-        });
-
-      const openSession = await tx.query.labEntrySessions.findFirst({
-        where: and(
-          eq(labEntrySessions.labId, labId),
-          eq(labEntrySessions.studentId, card.studentId),
-          isNull(labEntrySessions.exitAt)
-        ),
+    const tapRow = await db
+      .insert(labEntryTaps)
+      .values({
+        labId,
+        deviceId: device.id,
+        rfidUid,
+        rawPayload,
+        processed: false,
+      })
+      .returning({
+        id: labEntryTaps.id,
+        tappedAt: labEntryTaps.tappedAt,
       });
 
-      if (!openSession) {
-        await tx.insert(labEntrySessions).values({
-          labId,
-          studentId: card.studentId,
-          rfidCardId: card.id,
-          entryDeviceId: device.id,
-          entryTapId: tapRow[0].id,
-          entryAt: tapRow[0].tappedAt,
-          status: 'INSIDE',
-        });
+    const openSession = await db.query.labEntrySessions.findFirst({
+      where: and(
+        eq(labEntrySessions.labId, labId),
+        eq(labEntrySessions.studentId, card.studentId),
+        isNull(labEntrySessions.exitAt)
+      ),
+    });
 
-        const updatedTap = await tx
-          .update(labEntryTaps)
-          .set({ processed: true, result: 'ENTRY_CREATED' })
-          .where(eq(labEntryTaps.id, tapRow[0].id))
-          .returning({ result: labEntryTaps.result });
+    let result: 'ENTRY_CREATED' | 'EXIT_MARKED' = 'ENTRY_CREATED';
 
-        await tx
-          .update(labEntryDevices)
-          .set({ lastSeenAt: new Date(), updatedAt: new Date() })
-          .where(eq(labEntryDevices.id, device.id));
+    if (!openSession) {
+      await db.insert(labEntrySessions).values({
+        labId,
+        studentId: card.studentId,
+        rfidCardId: card.id,
+        entryDeviceId: device.id,
+        entryTapId: tapRow[0].id,
+        entryAt: tapRow[0].tappedAt,
+        status: 'INSIDE',
+      });
+    } else {
+      result = 'EXIT_MARKED';
 
-        return { result: updatedTap[0].result, tapId: tapRow[0].id };
-      }
-
-      await tx
+      await db
         .update(labEntrySessions)
         .set({
           exitAt: tapRow[0].tappedAt,
@@ -190,25 +179,22 @@ export async function POST(req: NextRequest) {
           updatedAt: new Date(),
         })
         .where(eq(labEntrySessions.id, openSession.id));
+    }
 
-      const updatedTap = await tx
-        .update(labEntryTaps)
-        .set({ processed: true, result: 'EXIT_MARKED' })
-        .where(eq(labEntryTaps.id, tapRow[0].id))
-        .returning({ result: labEntryTaps.result });
+    await db
+      .update(labEntryTaps)
+      .set({ processed: true, result })
+      .where(eq(labEntryTaps.id, tapRow[0].id));
 
-      await tx
-        .update(labEntryDevices)
-        .set({ lastSeenAt: new Date(), updatedAt: new Date() })
-        .where(eq(labEntryDevices.id, device.id));
-
-      return { result: updatedTap[0].result, tapId: tapRow[0].id };
-    });
+    await db
+      .update(labEntryDevices)
+      .set({ lastSeenAt: new Date(), updatedAt: new Date() })
+      .where(eq(labEntryDevices.id, device.id));
 
     return NextResponse.json({
       success: true,
-      result: tap.result,
-      tapId: tap.tapId,
+      result,
+      tapId: tapRow[0].id,
     });
   } catch (error) {
     console.error('[POST /api/lab-entry/tap]', error);
