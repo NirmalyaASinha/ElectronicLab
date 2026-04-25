@@ -8,3 +8,4 @@ export * from './audit';
 export * from './projects';
 export * from './information';
 export * from './concerns';
+export * from './lab-entry';

@@ -1,0 +1,217 @@
+import { createHash, timingSafeEqual } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
+import { and, desc, eq, gte, isNull } from 'drizzle-orm';
+import { db } from '@/db';
+import { labEntryDevices, labEntrySessions, labEntryTaps, labRfidCards, labs } from '@/db/schema';
+
+const hashSecret = (secret: string) => createHash('sha256').update(secret).digest('hex');
+
+const sameDigest = (a: string, b: string) => {
+  const left = Buffer.from(a, 'hex');
+  const right = Buffer.from(b, 'hex');
+  return left.length === right.length && timingSafeEqual(left, right);
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const deviceUid = typeof body.deviceUid === 'string' ? body.deviceUid.trim() : '';
+    const deviceSecret = typeof body.deviceSecret === 'string' ? body.deviceSecret.trim() : '';
+    const labId = typeof body.labId === 'string' ? body.labId.trim() : '';
+    const rfidUid = typeof body.rfidUid === 'string' ? body.rfidUid.trim().toUpperCase() : '';
+    const rawPayload =
+      typeof body.rawPayload === 'string'
+        ? body.rawPayload
+        : body.rawPayload && typeof body.rawPayload === 'object'
+          ? JSON.stringify(body.rawPayload)
+          : null;
+
+    if (!deviceUid || !deviceSecret || !labId || !rfidUid) {
+      return NextResponse.json({ success: false, error: 'deviceUid, deviceSecret, labId, and rfidUid are required' }, { status: 400 });
+    }
+
+    const device = await db.query.labEntryDevices.findFirst({
+      where: and(eq(labEntryDevices.deviceUid, deviceUid), eq(labEntryDevices.labId, labId)),
+    });
+
+    if (!device || !device.isActive) {
+      return NextResponse.json({ success: false, error: 'Device not authorized', result: 'DEVICE_UNAUTHORIZED' }, { status: 403 });
+    }
+
+    if (!sameDigest(device.deviceSecretHash, hashSecret(deviceSecret))) {
+      return NextResponse.json({ success: false, error: 'Invalid device secret', result: 'DEVICE_UNAUTHORIZED' }, { status: 403 });
+    }
+
+    const labRow = await db.query.labs.findFirst({ where: eq(labs.id, labId) });
+    if (!labRow) {
+      return NextResponse.json({ success: false, error: 'Lab not found' }, { status: 404 });
+    }
+
+    const card = await db.query.labRfidCards.findFirst({
+      where: eq(labRfidCards.rfidUid, rfidUid),
+    });
+
+    if (!card) {
+      const tapRow = await db
+        .insert(labEntryTaps)
+        .values({
+          labId,
+          deviceId: device.id,
+          rfidUid,
+          rawPayload,
+          processed: true,
+          result: 'UNKNOWN_CARD',
+        })
+        .returning({
+          id: labEntryTaps.id,
+        });
+
+      await db
+        .update(labEntryDevices)
+        .set({ lastSeenAt: new Date(), updatedAt: new Date() })
+        .where(eq(labEntryDevices.id, device.id));
+
+      return NextResponse.json({
+        success: true,
+        result: 'UNKNOWN_CARD',
+        tapId: tapRow[0].id,
+      });
+    }
+
+    if (!card.isActive) {
+      const tapRow = await db
+        .insert(labEntryTaps)
+        .values({
+          labId,
+          deviceId: device.id,
+          rfidUid,
+          rawPayload,
+          processed: true,
+          result: 'INACTIVE_CARD',
+        })
+        .returning({
+          id: labEntryTaps.id,
+        });
+
+      await db
+        .update(labEntryDevices)
+        .set({ lastSeenAt: new Date(), updatedAt: new Date() })
+        .where(eq(labEntryDevices.id, device.id));
+
+      return NextResponse.json({
+        success: true,
+        result: 'INACTIVE_CARD',
+        tapId: tapRow[0].id,
+      });
+    }
+
+    const recentTaps = await db
+      .select({
+        id: labEntryTaps.id,
+        result: labEntryTaps.result,
+        tappedAt: labEntryTaps.tappedAt,
+      })
+      .from(labEntryTaps)
+      .where(
+        and(
+          eq(labEntryTaps.labId, labId),
+          eq(labEntryTaps.rfidUid, rfidUid),
+          gte(labEntryTaps.tappedAt, new Date(Date.now() - 5000))
+        )
+      )
+      .orderBy(desc(labEntryTaps.tappedAt))
+      .limit(1);
+
+    const recentTap = recentTaps[0];
+
+    if (recentTap) {
+      return NextResponse.json({
+        success: true,
+        result: recentTap.result ?? 'DUPLICATE_TAP',
+        duplicate: true,
+      });
+    }
+
+    const tap = await db.transaction(async (tx) => {
+      const tapRow = await tx
+        .insert(labEntryTaps)
+        .values({
+          labId,
+          deviceId: device.id,
+          rfidUid,
+          rawPayload,
+          processed: false,
+        })
+        .returning({
+          id: labEntryTaps.id,
+          tappedAt: labEntryTaps.tappedAt,
+        });
+
+      const openSession = await tx.query.labEntrySessions.findFirst({
+        where: and(
+          eq(labEntrySessions.labId, labId),
+          eq(labEntrySessions.studentId, card.studentId),
+          isNull(labEntrySessions.exitAt)
+        ),
+      });
+
+      if (!openSession) {
+        await tx.insert(labEntrySessions).values({
+          labId,
+          studentId: card.studentId,
+          rfidCardId: card.id,
+          entryDeviceId: device.id,
+          entryTapId: tapRow[0].id,
+          entryAt: tapRow[0].tappedAt,
+          status: 'INSIDE',
+        });
+
+        const updatedTap = await tx
+          .update(labEntryTaps)
+          .set({ processed: true, result: 'ENTRY_CREATED' })
+          .where(eq(labEntryTaps.id, tapRow[0].id))
+          .returning({ result: labEntryTaps.result });
+
+        await tx
+          .update(labEntryDevices)
+          .set({ lastSeenAt: new Date(), updatedAt: new Date() })
+          .where(eq(labEntryDevices.id, device.id));
+
+        return { result: updatedTap[0].result, tapId: tapRow[0].id };
+      }
+
+      await tx
+        .update(labEntrySessions)
+        .set({
+          exitAt: tapRow[0].tappedAt,
+          exitDeviceId: device.id,
+          exitTapId: tapRow[0].id,
+          status: 'COMPLETED',
+          updatedAt: new Date(),
+        })
+        .where(eq(labEntrySessions.id, openSession.id));
+
+      const updatedTap = await tx
+        .update(labEntryTaps)
+        .set({ processed: true, result: 'EXIT_MARKED' })
+        .where(eq(labEntryTaps.id, tapRow[0].id))
+        .returning({ result: labEntryTaps.result });
+
+      await tx
+        .update(labEntryDevices)
+        .set({ lastSeenAt: new Date(), updatedAt: new Date() })
+        .where(eq(labEntryDevices.id, device.id));
+
+      return { result: updatedTap[0].result, tapId: tapRow[0].id };
+    });
+
+    return NextResponse.json({
+      success: true,
+      result: tap.result,
+      tapId: tap.tapId,
+    });
+  } catch (error) {
+    console.error('[POST /api/lab-entry/tap]', error);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+  }
+}

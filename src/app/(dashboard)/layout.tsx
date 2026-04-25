@@ -81,6 +81,7 @@ export default function DashboardLayout({
       { label: 'My Requests', href: '/student/requests', icon: <ListChecks /> },
       { label: 'Concerns', href: '/student/concerns', icon: <MessageSquareWarning /> },
       { label: 'Lab Access', href: '/student/lab-access', icon: <KeyRound /> },
+      { label: 'Lab Entries', href: '/student/lab-entries', icon: <ListChecks /> },
       { label: 'My Fines', href: '/student/fines', icon: <ReceiptIndianRupee /> },
       { label: 'Profile', href: '/profile', icon: <ContactRound /> },
     ],
@@ -93,6 +94,7 @@ export default function DashboardLayout({
       { label: 'Inventory', href: '/faculty/components', icon: <Warehouse /> },
       { label: 'Students', href: '/faculty/students', icon: <BookUser /> },
       { label: 'Lab Access', href: '/faculty/lab-access', icon: <KeyRound /> },
+      { label: 'Lab Entries', href: '/faculty/lab-entries', icon: <ListChecks /> },
       { label: 'Profile', href: '/profile', icon: <ContactRound /> },
     ],
     ADMIN: [
@@ -103,6 +105,7 @@ export default function DashboardLayout({
       { label: 'Analytics', href: '/admin/analytics', icon: <ChartNoAxesColumn /> },
       { label: 'Students', href: '/admin/students', icon: <BookUser /> },
       { label: 'Lab Access', href: '/admin/labs', icon: <KeyRound /> },
+      { label: 'Lab Entries', href: '/admin/lab-entries', icon: <ListChecks /> },
       { label: 'Profile', href: '/profile', icon: <ContactRound /> },
     ],
   };
