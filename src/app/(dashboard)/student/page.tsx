@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { PageTransition, StaggerContainer, StaggerItem } from '@/components/dashboard/PageTransition';
 import { LiveClock } from '@/components/dashboard/LiveClock';
 import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
+import InformationBoard from '@/components/InformationBoard';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,8 +25,11 @@ export default function StudentHome() {
 
         {/* Top Section: Clock and Calendar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-4">
             <LiveClock />
+            <div>
+              <InformationBoard />
+            </div>
           </div>
           <div className="lg:col-span-2">
             <MiniCalendar />
