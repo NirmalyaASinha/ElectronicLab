@@ -1,10 +1,10 @@
-# ElecTronic Lab - Component Management System
+# E-Lab - Smart Laboratory Community Platform
 
-A comprehensive digital laboratory component management system designed for educational institutions to streamline the borrowing, issuing, and tracking of laboratory equipment and components.
+E-Lab is a comprehensive digital platform for SASET laboratories that goes beyond simple component management. It combines component issuing, project coordination, lab access, notices, concerns, and student collaboration into a single community-oriented lab experience.
 
 ## 🎯 Overview
 
-ElecTronic Lab is a modern web-based platform that enables students to request components from the laboratory inventory, allows faculty to approve and track these requests, and provides administrators with complete visibility over component inventory and system analytics.
+E-Lab is a modern web-based platform that enables students to request components, participate in lab projects, access lab resources, raise concerns, and stay updated through a shared information board. Faculty and administrators can manage requests, monitor activity, publish notices, and maintain a more holistic lab ecosystem.
 
 ## ✨ Features
 
@@ -12,6 +12,9 @@ ElecTronic Lab is a modern web-based platform that enables students to request c
 - **Browse Components** - Search and explore available laboratory components
 - **Request Components** - Submit requests for components with customizable duration (3, 7, or 14 days)
 - **Track Requests** - Monitor the status of submitted requests in real-time
+- **Access Lab Resources** - View lab access-related updates and availability information
+- **Follow Projects** - Stay connected with project-related activity and updates
+- **Raise Concerns** - Share concerns or issues through the platform
 - **Fine Management** - View and manage any fines incurred
 - **Dashboard** - Quick access to browsing, requests, and fines with live clock and due date calendar
 
@@ -21,12 +24,16 @@ ElecTronic Lab is a modern web-based platform that enables students to request c
 - **Track Returns** - Monitor component returns and mark as completed
 - **Inventory Monitoring** - View current and past component issues with detailed analytics
 - **Component History** - Access complete history of issued and returned components
+- **Publish Notices** - Share announcements, updates, and lab guidance through the information board
+- **Support Projects** - Coordinate project-related work and lab activity with students
+- **Manage Lab Access** - Control access-related updates and communication for the lab
 
 ### Admin Features
 - **Inventory Management** - Add, edit, and manage laboratory component inventory
 - **User Management** - Manage student and faculty accounts (create, view, deactivate)
 - **Analytics Dashboard** - View system-wide statistics and trends
 - **Complete Oversight** - Monitor all requests, issues, returns, and fines
+- **Community Administration** - Publish notices, manage lab access, and support the wider lab community
 
 ## 🛠️ Tech Stack
 
@@ -168,6 +175,13 @@ src/
 - Non-intrusive user feedback
 - Auto-dismiss after 3 seconds
 - Success (green) and error (red) variants
+
+### Information Board / Notices
+- **Purpose**: Admins and Faculty can post notices, updates, and lab information for students to read on the dashboard.
+- **Frontend**: `InformationBoard` is placed on the dashboard for student visibility, with faculty CRUD controls and an editor modal for managing notices.
+- **API**: `/api/information` supports listing, creating, updating, and soft-deleting notices.
+- **Data notes**: `visibleFrom` and `visibleUntil` are timestamp fields; server coercion prevents invalid database parameters.
+- **Authorization**: Only `ADMIN` and `FACULTY` may create, update, or delete; `GET` requires an authenticated session.
 
 ### Modal Dialogs
 - Responsive modal implementation
