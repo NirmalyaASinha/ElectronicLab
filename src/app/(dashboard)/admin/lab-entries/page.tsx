@@ -87,6 +87,7 @@ export default function AdminLabEntriesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const toDateKey = (date: Date) => {
     const year = date.getFullYear();
@@ -95,9 +96,11 @@ export default function AdminLabEntriesPage() {
     return `${year}-${month}-${day}`;
   };
 
-  const loadData = async () => {
+  const loadData = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       setError('');
 
       const [labsRes, studentsRes, cardsRes, devicesRes, entriesRes] = await Promise.all([
@@ -133,16 +136,27 @@ export default function AdminLabEntriesPage() {
 
       if (entriesData.success) {
         setEntries(entriesData.data || []);
+        setLastUpdated(new Date());
       }
     } catch {
       setError('Failed to load lab entry data');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     void loadData();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void loadData(false);
+    }, 3000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const selectedLab = useMemo(
@@ -540,11 +554,23 @@ export default function AdminLabEntriesPage() {
         <div>
           <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Lab Entries</h1>
           <p className="text-[var(--text-secondary)]">Bind RFID cards, register devices, and review entry sessions.</p>
+          {lastUpdated ? (
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Last updated {lastUpdated.toLocaleTimeString()}</p>
+          ) : null}
         </div>
 
         {error ? (
           <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-light)] p-4 text-sm text-[var(--danger)]">
-            {error}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>{error}</span>
+              <button
+                type="button"
+                onClick={() => void loadData()}
+                className="rounded-xl border border-[var(--danger)] bg-white/40 px-3 py-1.5 text-xs font-semibold text-[var(--danger)]"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : null}
 

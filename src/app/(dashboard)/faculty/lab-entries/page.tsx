@@ -45,6 +45,7 @@ export default function FacultyLabEntriesPage() {
   const [selectedDateKey, setSelectedDateKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [entriesOverlayOpen, setEntriesOverlayOpen] = useState(false);
   const [entriesOverlayMode, setEntriesOverlayMode] = useState<'recent' | 'all'>('all');
   const [entrySearch, setEntrySearch] = useState('');
@@ -56,9 +57,11 @@ export default function FacultyLabEntriesPage() {
     return `${year}-${month}-${day}`;
   };
 
-  const loadData = async () => {
+  const loadData = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       setError('');
 
       const entriesRes = await fetch('/api/lab-entry/history', { cache: 'no-store' });
@@ -67,6 +70,7 @@ export default function FacultyLabEntriesPage() {
       if (entriesData.success) {
         const rows: EntryRow[] = entriesData.data || [];
         setEntries(rows);
+        setLastUpdated(new Date());
 
         const uniqueLabs = Array.from(
           new Map(
@@ -85,12 +89,22 @@ export default function FacultyLabEntriesPage() {
     } catch {
       setError('Failed to load lab entry history');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     void loadData();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void loadData(false);
+    }, 3000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const selectedLab = useMemo(
@@ -318,7 +332,16 @@ export default function FacultyLabEntriesPage() {
 
         {error ? (
           <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-light)] p-4 text-sm text-[var(--danger)]">
-            {error}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>{error}</span>
+              <button
+                type="button"
+                onClick={() => void loadData()}
+                className="rounded-xl border border-[var(--danger)] bg-white/40 px-3 py-1.5 text-xs font-semibold text-[var(--danger)]"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : null}
 
@@ -330,6 +353,9 @@ export default function FacultyLabEntriesPage() {
                 <p className="text-sm text-[var(--text-secondary)]">
                   Click a date to see how many students entered and who they were.
                 </p>
+                {lastUpdated ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">Last updated {lastUpdated.toLocaleTimeString()}</p>
+                ) : null}
               </div>
               <div className="flex items-center gap-2">
                 <button

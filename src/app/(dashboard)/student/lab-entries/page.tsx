@@ -22,6 +22,7 @@ export default function StudentLabEntriesPage() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const toDateKey = (date: Date) => {
     const year = date.getFullYear();
@@ -30,28 +31,41 @@ export default function StudentLabEntriesPage() {
     return `${year}-${month}-${day}`;
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
+  const loadData = async (showLoading = true) => {
+    try {
+      if (showLoading) {
         setLoading(true);
-        setError('');
+      }
+      setError('');
 
-        const response = await fetch('/api/lab-entry/history', { cache: 'no-store' });
-        const data = await response.json();
+      const response = await fetch('/api/lab-entry/history', { cache: 'no-store' });
+      const data = await response.json();
 
-        if (data.success) {
-          setEntries(data.data || []);
-        } else {
-          setError(data.error || 'Failed to load your lab entries');
-        }
-      } catch {
-        setError('Failed to load your lab entries');
-      } finally {
+      if (data.success) {
+        setEntries(data.data || []);
+        setLastUpdated(new Date());
+      } else {
+        setError(data.error || 'Failed to load your lab entries');
+      }
+    } catch {
+      setError('Failed to load your lab entries');
+    } finally {
+      if (showLoading) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     void loadData();
+  }, []);
+
+  useEffect(() => {
+      const timer = setInterval(() => {
+        void loadData(false);
+      }, 3000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const visitCounts = useMemo(() => {
@@ -114,11 +128,23 @@ export default function StudentLabEntriesPage() {
         <div>
           <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Lab Entries</h1>
           <p className="text-[var(--text-secondary)]">See when you entered and exited each lab.</p>
+          {lastUpdated ? (
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Last updated {lastUpdated.toLocaleTimeString()}</p>
+          ) : null}
         </div>
 
         {error ? (
           <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-light)] p-4 text-sm text-[var(--danger)]">
-            {error}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>{error}</span>
+              <button
+                type="button"
+                onClick={() => void loadData()}
+                className="rounded-xl border border-[var(--danger)] bg-white/40 px-3 py-1.5 text-xs font-semibold text-[var(--danger)]"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : null}
 
