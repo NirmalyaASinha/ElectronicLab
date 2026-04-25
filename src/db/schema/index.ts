@@ -5,3 +5,4 @@ export * from './fines';
 export * from './notifications';
 export * from './lab-access';
 export * from './audit';
+export * from './projects';

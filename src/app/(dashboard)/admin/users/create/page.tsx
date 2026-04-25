@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -20,6 +20,8 @@ export default function CreateUserPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
+  const [session, setSession] = useState<any | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
     const notification = document.createElement('div');
@@ -42,6 +44,32 @@ export default function CreateUserPage() {
       document.body.removeChild(notification);
     }, 3000);
   };
+
+  // check current session to ensure admin
+  useEffect(() => {
+    let mounted = true;
+    async function check() {
+      try {
+        const res = await fetch('/api/auth/session');
+        if (!mounted) return;
+        if (!res.ok) {
+          setSession(null);
+        } else {
+          const data = await res.json();
+          setSession(data?.user ?? null);
+        }
+      } catch (e) {
+        setSession(null);
+      } finally {
+        if (mounted) setCheckingAuth(false);
+      }
+    }
+
+    void check();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -137,7 +165,15 @@ export default function CreateUserPage() {
           border: '1px solid var(--border)',
         }}
       >
-        <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {checkingAuth ? (
+          <div style={{ padding: '1rem' }}>Checking permissions…</div>
+        ) : session?.role !== 'ADMIN' ? (
+          <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
+            You do not have permission to create users. Only admins can perform this action.
+          </div>
+        ) : (
+          <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        
           {error && (
             <div
               style={{
@@ -523,6 +559,7 @@ export default function CreateUserPage() {
             </Link>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

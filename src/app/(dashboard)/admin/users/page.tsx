@@ -10,17 +10,15 @@ export default function Users() {
   return (
     <UsersContext.Provider value={state}>
       <div>
-        <h1 style={{ fontSize: '1.875rem', fontWeight: 700, marginBottom: '1rem' }}>User Management</h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Search, filter, and inspect student & faculty records.</p>
+        <h1 className="text-2xl font-extrabold mb-3">User Management</h1>
+        <p className="text-sm text-muted-foreground mb-4">Search, filter, and inspect student & faculty records.</p>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <TabBar />
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <div className="flex items-center gap-4 mb-4">
+          <TabBar />
+          <div className="ml-auto flex items-center gap-3">
             <SearchBox />
-            <a href="/admin/users/create" style={{ textDecoration: 'none' }}>
-              <button style={{ backgroundColor: 'var(--accent)', color: 'white', padding: '0.5rem 0.9rem', borderRadius: 10, border: 'none', cursor: 'pointer' }}>+ Create User</button>
+            <a href="/admin/users/create" className="no-underline">
+              <button className="bg-accent text-white px-3 py-1.5 rounded-md">+ Create User</button>
             </a>
           </div>
         </div>
@@ -38,10 +36,10 @@ function TabBar() {
   });
 
   return (
-    <div style={{ display: 'flex', gap: 6 }}>
-      <div onClick={() => setTab('all')} style={tabStyle('all')}>All</div>
-      <div onClick={() => setTab('students')} style={tabStyle('students')}>Students</div>
-      <div onClick={() => setTab('faculty')} style={tabStyle('faculty')}>Faculty</div>
+    <div className="flex gap-2">
+      <div onClick={() => setTab('all')} className={tab === 'all' ? 'px-3 py-1 rounded-md border border-accent bg-accent/10 cursor-pointer' : 'px-3 py-1 rounded-md cursor-pointer'}>All</div>
+      <div onClick={() => setTab('students')} className={tab === 'students' ? 'px-3 py-1 rounded-md border border-accent bg-accent/10 cursor-pointer' : 'px-3 py-1 rounded-md cursor-pointer'}>Students</div>
+      <div onClick={() => setTab('faculty')} className={tab === 'faculty' ? 'px-3 py-1 rounded-md border border-accent bg-accent/10 cursor-pointer' : 'px-3 py-1 rounded-md cursor-pointer'}>Faculty</div>
     </div>
   );
 }
@@ -53,7 +51,7 @@ function SearchBox() {
       value={query}
       onChange={(e) => setQuery(e.target.value)}
       placeholder="Search name, email, roll..."
-      style={{ padding: '0.45rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', minWidth: 240 }}
+      className="px-3 py-1 rounded-md border border-input min-w-[220px]"
     />
   );
 }
@@ -128,7 +126,26 @@ function UserDirectoryInner() {
     };
   }, []);
 
-  if (loading) return <div style={{ color: 'var(--text-secondary)' }}>Loading users...</div>;
+  if (loading)
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="animate-pulse mb-3 p-3 rounded-md bg-slate-800">
+              <div className="h-4 bg-slate-700 rounded w-1/2 mb-2"></div>
+              <div className="h-3 bg-slate-700 rounded w-3/4"></div>
+            </div>
+          ))}
+        </div>
+        <div>
+          <div className="animate-pulse p-4 rounded-md bg-slate-800 h-64">
+            <div className="h-6 bg-slate-700 rounded w-1/3 mb-4"></div>
+            <div className="h-3 bg-slate-700 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-slate-700 rounded w-2/3"></div>
+          </div>
+        </div>
+      </div>
+    );
   if (error) return <div style={{ color: 'var(--danger)' }}>{error}</div>;
 
   // build list depending on tab
@@ -153,31 +170,27 @@ function UserDirectoryInner() {
 
   // two-column layout: left list, right detail pane
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 12, alignItems: 'start' }}>
-      <div style={{ height: '72vh', overflowY: 'auto', paddingRight: 6 }}>
+    <div className="grid grid-cols-[360px_1fr] gap-4 items-start">
+      <div className="h-[72vh] overflow-y-auto pr-2">
         {list.map((u) => {
           const active = selectedUserId === u.id;
           return (
             <div
               key={u.id}
               onClick={() => setSelectedUserId(u.id)}
-              style={{
-                borderRadius: 10,
-                padding: 10,
-                marginBottom: 10,
-                background: active ? 'rgba(59,130,246,0.06)' : 'var(--bg-elevated)',
-                border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
-                cursor: 'pointer',
-              }}
+              className={`mb-3 p-3 rounded-md cursor-pointer ${active ? 'bg-slate-800 border border-accent' : 'bg-card border border-border'} hover:bg-slate-800`}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{u.email}</div>
+              <div className="flex justify-between gap-3">
+                <div className="flex gap-3 items-center">
+                  <Avatar name={u.name} />
+                  <div>
+                    <div className="font-semibold text-sm">{u.name}</div>
+                    <div className="text-xs text-muted-foreground">{u.email}</div>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{u.department ?? ''}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.rollNumber ?? ''}</div>
+                <div className="text-right text-xs text-muted-foreground">
+                  <div>{u.department ?? ''}</div>
+                  <div className="text-[12px]">{u.rollNumber ?? ''}</div>
                 </div>
               </div>
             </div>
@@ -185,11 +198,11 @@ function UserDirectoryInner() {
         })}
       </div>
 
-      <div style={{ height: '72vh', overflowY: 'auto', padding: 12, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)' }}>
+      <div className="h-[72vh] overflow-y-auto p-4 rounded-md border border-border bg-background">
         {selectedUserId ? (
           (() => {
             const user = [...students, ...faculty.map((f) => ({ ...f, role: 'FACULTY' }))].find((x) => x.id === selectedUserId);
-            if (!user) return <div style={{ color: 'var(--text-secondary)' }}>Selected user not found.</div>;
+            if (!user) return <div className="text-muted-foreground">Selected user not found.</div>;
             return user.role === 'FACULTY' || user.role === 'faculty' ? (
               <FacultyDetails faculty={user} labs={labs} history={history} />
             ) : (
@@ -197,10 +210,23 @@ function UserDirectoryInner() {
             );
           })()
         ) : (
-          <div style={{ color: 'var(--text-secondary)' }}>Select a user to see details.</div>
+          <div className="text-muted-foreground">Select a user to see details.</div>
         )}
       </div>
     </div>
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  const initials = (name || '')
+    .split(' ')
+    .map((s) => s[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-medium text-white">{initials || 'U'}</div>
   );
 }
 

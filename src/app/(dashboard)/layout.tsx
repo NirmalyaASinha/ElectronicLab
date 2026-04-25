@@ -96,10 +96,10 @@ export default function DashboardLayout({
   };
 
   const items = navItems[role as keyof typeof navItems] || [];
-  const unreadCount = useMemo(
-    () => notificationItems.filter((notification) => !notification.isRead).length,
-    [notificationItems]
-  );
+  const unreadCount = useMemo(() => {
+    if (!Array.isArray(notificationItems)) return 0;
+    return notificationItems.filter((notification) => !notification.isRead).length;
+  }, [notificationItems]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-base)' }}>
@@ -209,7 +209,7 @@ export default function DashboardLayout({
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Recent alerts and updates</p>
                 </div>
                 <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
-                  {notificationItems.length === 0 ? (
+                  {!Array.isArray(notificationItems) || notificationItems.length === 0 ? (
                     <div style={{ padding: '18px 16px', color: 'var(--text-secondary)', fontSize: '13px' }}>
                       No notifications yet.
                     </div>
