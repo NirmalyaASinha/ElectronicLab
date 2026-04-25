@@ -1,8 +1,10 @@
-'use client';
+"use client";
 
 import React from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { PageTransition, StaggerContainer, StaggerItem } from '@/components/dashboard/PageTransition';
+import { Plus, X } from 'lucide-react';
 
 export default function StudentProjectsPage() {
   const { data: session } = useSession();
@@ -19,6 +21,9 @@ export default function StudentProjectsPage() {
   const [componentsList, setComponentsList] = React.useState<any[]>([]);
   const [selectedComponents, setSelectedComponents] = React.useState<{ id: string; name?: string; quantity: number }[]>([]);
   const [driveLinks, setDriveLinks] = React.useState('');
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const modalRef = React.useRef<HTMLDivElement | null>(null);
+  const prevFocusRef = React.useRef<HTMLElement | null>(null);
   const [isNarrow, setIsNarrow] = React.useState<boolean>(typeof window !== 'undefined' ? window.innerWidth < 900 : false);
   const [compDropdownOpen, setCompDropdownOpen] = React.useState(false);
   const [compSearch, setCompSearch] = React.useState('');
@@ -69,6 +74,48 @@ export default function StudentProjectsPage() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // modal accessibility: autofocus, ESC-to-close, and basic focus trap
+  React.useEffect(() => {
+    if (!modalOpen) return;
+    const modal = modalRef.current;
+    prevFocusRef.current = document.activeElement as HTMLElement | null;
+
+    // focus first focusable element inside modal
+    const focusable = modal?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])');
+    const first = focusable && focusable.length ? focusable[0] : null;
+    first?.focus();
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setModalOpen(false);
+        return;
+      }
+      if (e.key === 'Tab' && modal && focusable && focusable.length) {
+        const firstEl = focusable[0];
+        const lastEl = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === firstEl) {
+            e.preventDefault();
+            lastEl.focus();
+          }
+        } else {
+          if (document.activeElement === lastEl) {
+            e.preventDefault();
+            firstEl.focus();
+          }
+        }
+      }
+    }
+
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      // restore previous focus
+      try { prevFocusRef.current?.focus(); } catch (e) { /* ignore */ }
+    };
+  }, [modalOpen]);
+
   // member autocomplete: query students and faculty endpoints
   React.useEffect(() => {
     let mounted = true;
@@ -104,31 +151,38 @@ export default function StudentProjectsPage() {
       const data = await res.json();
       if (data.success) {
         const created = Array.isArray(data.data) ? data.data[0] : data.data;
-        // add members if provided (comma-separated user ids)
-        const memberIds = memberInput.split(',').map(s => s.trim()).filter(Boolean);
-        for (const uid of memberIds) {
-          try {
-            await fetch(`/api/projects/${created.id}/members`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid }) });
-          } catch (e) {
-            // ignore member add failures
+        const projectId = created?.id || created?.projectId || created?.project_id || null;
+        console.log('Created project id:', projectId, 'raw response:', created);
+        if (!projectId) {
+          console.warn('Created project missing id', created);
+        } else {
+          // add members if provided (comma-separated user ids)
+          const memberIds = memberInput.split(',').map(s => s.trim()).filter(Boolean);
+          for (const uid of memberIds) {
+            try {
+              await fetch(`/api/projects/${projectId}/members`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid }) });
+            } catch (e) {
+              // ignore member add failures
+            }
           }
-        }
 
-        // add components if provided (format: componentId:quantity, comma separated)
-        const comps = componentInput.split(',').map(s => s.trim()).filter(Boolean);
-        for (const c of comps) {
-          const [componentId, qtyStr] = c.split(':').map(x => x.trim());
-          const quantity = qtyStr ? parseInt(qtyStr, 10) : 1;
-          try {
-            await fetch(`/api/projects/${created.id}/components`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ componentId, quantity }) });
-          } catch (e) {
-            // ignore component add failures
+          // add components if provided (format: componentId:quantity, comma separated)
+          const comps = componentInput.split(',').map(s => s.trim()).filter(Boolean);
+          for (const c of comps) {
+            const [componentId, qtyStr] = c.split(':').map(x => x.trim());
+            const quantity = qtyStr ? parseInt(qtyStr, 10) : 1;
+            try {
+              await fetch(`/api/projects/${projectId}/components`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ componentId, quantity }) });
+            } catch (e) {
+              // ignore component add failures
+            }
           }
         }
 
         // refresh list
         setProjects(prev => [created, ...prev]);
         setName(''); setDescription(''); setMemberInput(''); setComponentInput(''); setDriveLinks('');
+        setModalOpen(false);
       } else {
         setErrorMessage(data.error || 'Failed to create project');
       }
@@ -137,20 +191,27 @@ export default function StudentProjectsPage() {
     }
   };
 
-  if (loading) return <div style={{ padding: 16 }}>Loading projects…</div>;
+  if (loading) return <div className="p-4">Loading projects…</div>;
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700 }}>My Projects</h1>
-        {canCreate && (
-          <button onClick={() => { const el = document.getElementById('create-form'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--accent)', color: 'white', border: 'none' }}>Create Project</button>
-        )}
-      </div>
+    <PageTransition>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center mb-3">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">My Projects</h1>
+          {canCreate && (
+            <button onClick={() => setModalOpen(true)} aria-label="Create project" className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-[var(--accent)] text-white">
+              <Plus size={16} />
+            </button>
+          )}
+        </div>
 
-      {canCreate && (
-        <div id="create-form" style={{ marginBottom: 18, padding: 16, borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--border)', maxWidth: 980, marginLeft: 'auto', marginRight: 'auto' }}>
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr', alignItems: 'start' }}>
+        {canCreate && modalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setModalOpen(false)} />
+            <div className="relative w-full max-w-3xl mx-4">
+              <div ref={modalRef} role="dialog" aria-modal="true" className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)]">
+                <button onClick={() => setModalOpen(false)} className="absolute right-3 top-3 p-2 rounded-md text-[var(--text-secondary)] bg-transparent"><X size={18} /></button>
+                <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr', alignItems: 'start' }}>
             <div style={{ gridColumn: '1 / -1' }}>
               <input placeholder="Project name" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--border)', width: '100%', background: 'var(--bg-surface)', color: 'var(--text-primary)' }} />
             </div>
@@ -258,38 +319,48 @@ export default function StudentProjectsPage() {
               <input placeholder="Google Drive links (comma separated)" value={driveLinks} onChange={(e) => setDriveLinks(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)', width: '100%', background: 'var(--bg-surface)', color: 'var(--text-primary)' }} />
             </div>
 
-            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-start' }}>
-              <button onClick={handleCreate} disabled={creating} style={{ padding: '10px 14px', borderRadius: 8, background: 'var(--accent)', color: 'white', border: 'none' }}>{creating ? 'Creating…' : 'Create'}</button>
-              <button onClick={() => { setName(''); setDescription(''); setMembers([]); setMemberInput(''); setSelectedComponents([]); setComponentInput(''); setDriveLinks(''); }} style={{ padding: '10px 14px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border)' }}>Reset</button>
+            <div className="col-span-2 flex gap-2">
+              <button onClick={handleCreate} disabled={creating} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white">{creating ? 'Creating…' : 'Create'}</button>
+              <button onClick={() => { setName(''); setDescription(''); setMembers([]); setMemberInput(''); setSelectedComponents([]); setComponentInput(''); setDriveLinks(''); }} className="px-4 py-2 rounded-lg border">Reset</button>
             </div>
             {errorMessage && (
-              <div style={{ gridColumn: '1 / -1', color: 'var(--danger)', marginTop: 8 }}>{errorMessage}</div>
+              <div className="col-span-2 text-[var(--danger)] mt-2">{errorMessage}</div>
             )}
           </div>
         </div>
-      )}
-
-      {projects.length === 0 ? (
-        <div style={{ marginTop: 12, color: 'var(--text-secondary)' }}>You are not a member of any projects yet.</div>
-      ) : (
-        <div style={{ marginTop: 12, display: 'grid', gap: 12 }}>
-          {projects.map((p) => (
-            <div key={p.id} style={{ padding: 12, borderRadius: 10, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{p.name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{p.description}</div>
-                </div>
-                <div>
-                  <Link href={`/student/projects/${p.id}`}>
-                    <button style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--accent)', color: 'white', border: 'none' }}>Open</button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
+  )}
+        {projects.length === 0 ? (
+          <div className="text-[var(--text-secondary)]">You are not a member of any projects yet.</div>
+        ) : (
+          <StaggerContainer staggerDelay={0.05}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.map((p) => (
+                <StaggerItem key={p.id}>
+                  <div className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-all group h-full flex flex-col">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-[var(--text-primary)]">{p.name}</h3>
+                        <p className="text-sm text-[var(--text-secondary)] mt-2">{p.description || 'No description provided'}</p>
+                      </div>
+                      <div className="ml-4 flex-shrink-0">
+                        <Link href={`/student/projects/${p.id}`}>
+                          <button className="px-3 py-2 rounded-lg bg-[var(--accent)] text-white">Open</button>
+                        </Link>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 text-sm text-[var(--text-muted)]">
+                      {p.members && Array.isArray(p.members) ? `${p.members.length} member${p.members.length !== 1 ? 's' : ''}` : ''}
+                    </div>
+                  </div>
+                </StaggerItem>
+              ))}
+            </div>
+          </StaggerContainer>
+        )}
+      </div>
+    </PageTransition>
   );
 }

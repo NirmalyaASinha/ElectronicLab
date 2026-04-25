@@ -48,6 +48,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ success: false, error: 'Not a project member' }, { status: 403 });
     }
 
+    // ensure project exists
+    const project = await db.query.projects.findFirst({ where: (p, { eq }) => eq(p.id, projectId) });
+    if (!project) {
+      return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
+    }
+
     // Validate component availability
     const comp = await db.query.components.findFirst({ where: (c, { eq }) => eq(c.id, componentId) });
     if (!comp) return NextResponse.json({ success: false, error: 'Component not found' }, { status: 404 });

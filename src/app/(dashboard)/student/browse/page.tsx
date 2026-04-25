@@ -145,20 +145,29 @@ export default function BrowseComponents() {
     });
 
     if (matchedComponents.length === 0) {
+      // no matches in current list — notify user
       alert('No matching components found for this template in the current list.');
       return;
     }
 
+    const added: string[] = [];
     matchedComponents.slice(0, 5).forEach((component) => {
+      const maxQ = (component.maxIssueQuantity ?? component.maxIssueQuantity ?? component.quantityAvailable ?? 1) as number;
+      const maxD = (component.maxIssueDays ?? 7) as number;
       store.addItem({
         componentId: component.id,
         name: component.name,
         category: component.category,
         quantity: 1,
-        maxQuantity: component.maxIssueQuantity,
-        maxDays: component.maxIssueDays,
+        maxQuantity: maxQ,
+        maxDays: maxD,
       });
+      added.push(component.name);
     });
+
+    if (added.length > 0) {
+      alert(`Added ${added.length} components to your request: ${added.join(', ')}`);
+    }
   };
 
   return (
@@ -237,27 +246,7 @@ export default function BrowseComponents() {
           </div>
         </div>
 
-        {/* Recommendations */}
-        <div className="space-y-4 p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)]">
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-1">Recommended Components</h2>
-            <p className="text-sm text-[var(--text-secondary)]">Popular and available items worth checking first</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {components
-              .filter((component) => component.status !== 'OUT_OF_STOCK')
-              .slice(0, 3)
-              .map((component) => (
-                <div key={component.id} className="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]">
-                  <h3 className="font-semibold text-[var(--text-primary)]">{component.name}</h3>
-                  <p className="text-sm text-[var(--text-secondary)] mt-1">{component.category}</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-3">
-                    Available {component.quantityAvailable}/{component.quantityTotal} · Max {component.maxIssueDays} days
-                  </p>
-                </div>
-              ))}
-          </div>
-        </div>
+        {/* Recommendations removed per user request */}
 
         {/* Components Grid */}
         {loading ? (
