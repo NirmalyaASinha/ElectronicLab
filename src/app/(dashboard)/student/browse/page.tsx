@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { PageTransition, StaggerContainer, StaggerItem } from '@/components/dashboard/PageTransition';
 import { useRequestStore } from '@/store/requestStore';
 import { Search, Plus, Check } from 'lucide-react';
+import ComponentDetailModal from '@/components/ComponentDetailModal';
 
 interface Component {
   id: string;
@@ -29,6 +30,8 @@ export default function BrowseComponents() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState<any | null>(null);
 
   const templates = [
     {
@@ -266,7 +269,7 @@ export default function BrowseComponents() {
 
                 return (
                   <StaggerItem key={component.id}>
-                    <div className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-all duration-300 group cursor-pointer h-full flex flex-col">
+                        <div onClick={() => { setSelectedComponent(component); setModalOpen(true); }} className="p-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-all duration-300 group cursor-pointer h-full flex flex-col">
                       {/* Image placeholder */}
                       <div className="w-full h-32 bg-[var(--bg-elevated)] rounded-lg mb-4 flex items-center justify-center group-hover:bg-[var(--accent-glow)] transition-colors">
                         {component.imageUrl ? (
@@ -336,6 +339,7 @@ export default function BrowseComponents() {
             </div>
           </StaggerContainer>
         )}
+          <ComponentDetailModal component={selectedComponent || {}} open={modalOpen} onClose={() => setModalOpen(false)} />
       </div>
     </PageTransition>
   );
