@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { LoginSchema } from '@/lib/validations';
 import Image from 'next/image';
 
@@ -73,22 +74,26 @@ export default function LoginPage() {
         return;
       }
 
+      // Use redirect: false so we can control routing and show clear messages
       const result = await signIn('credentials', {
         email: normalizedEmail,
         password: normalizedPassword,
-        redirect: true,
-        callbackUrl: '/',
+        redirect: false,
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
-        showNotification('Invalid email or password', 'error');
+        // show backend-provided error when available, else generic
+        const msg = result?.error || 'Invalid email or password';
+        setError(msg);
+        showNotification(msg, 'error');
         setLoading(false);
         return;
       }
 
-      // NextAuth will handle the redirect; show quick feedback
+      // On success, redirect client-side to the app root on current origin
       showNotification('Login successful!', 'success');
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      window.location.href = origin + '/';
     } catch {
       setError('Login failed. Please try again.');
       showNotification('Login failed. Please try again.', 'error');
@@ -96,6 +101,34 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  // Display friendly messages when NextAuth redirects back with error query
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('error');
+      if (err) {
+        let msg = '';
+        switch (err) {
+          case 'CredentialsSignin':
+            msg = 'Invalid email or password';
+            break;
+          case 'SessionRequired':
+            msg = 'Please sign in to continue';
+            break;
+          case 'AccessDenied':
+            msg = 'Access denied';
+            break;
+          default:
+            msg = err;
+        }
+        setError(msg);
+        showNotification(msg, 'error');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   return (
     <div

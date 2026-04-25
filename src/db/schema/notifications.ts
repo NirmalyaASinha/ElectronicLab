@@ -19,6 +19,13 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'FINE_ISSUED',
   'FINE_WAIVED',
   'RETURN_CONFIRMED',
+  'CONCERN_CREATED',
+  'CONCERN_REPLIED',
+  'CONCERN_STATUS_UPDATED',
+  'PROJECT_CREATED',
+  'PROJECT_JOINED',
+  'PROJECT_MEMBER_ADDED',
+  'PROJECT_UPDATED',
 ]);
 
 export const notifications = pgTable('notifications', {

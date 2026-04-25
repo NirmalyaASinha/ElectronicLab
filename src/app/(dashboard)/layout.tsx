@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { DashboardTopBar } from '@/components/dashboard/DashboardTopBar';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Bell, Moon, Sun, FolderKanban, Warehouse, UserCog, ChartNoAxesColumn, BookUser, KeyRound, ContactRound, CircleCheckBig, PackageOpen, PackageCheck, ScanSearch, ListChecks, ReceiptIndianRupee } from 'lucide-react';
+import { Bell, Moon, Sun, FolderKanban, Warehouse, UserCog, ChartNoAxesColumn, BookUser, KeyRound, ContactRound, CircleCheckBig, PackageOpen, PackageCheck, ScanSearch, ListChecks, ReceiptIndianRupee, MessageSquareWarning } from 'lucide-react';
 
 type NotificationItem = {
   id: string;
@@ -15,6 +15,12 @@ type NotificationItem = {
   message: string;
   isRead: boolean;
   createdAt: string;
+  metadata?: {
+    href?: string;
+    requestId?: string;
+    concernId?: string;
+    projectId?: string;
+  } | null;
 };
 
 export default function DashboardLayout({
@@ -73,6 +79,7 @@ export default function DashboardLayout({
       { label: 'Browse', href: '/student/browse', icon: <ScanSearch /> },
       { label: 'My Projects', href: '/student/projects', icon: <FolderKanban /> },
       { label: 'My Requests', href: '/student/requests', icon: <ListChecks /> },
+      { label: 'Concerns', href: '/student/concerns', icon: <MessageSquareWarning /> },
       { label: 'Lab Access', href: '/student/lab-access', icon: <KeyRound /> },
       { label: 'My Fines', href: '/student/fines', icon: <ReceiptIndianRupee /> },
       { label: 'Profile', href: '/profile', icon: <ContactRound /> },
@@ -80,6 +87,7 @@ export default function DashboardLayout({
     FACULTY: [
       { label: 'Student Projects', href: '/student/projects', icon: <FolderKanban /> },
       { label: 'Approvals', href: '/faculty/approvals', icon: <CircleCheckBig /> },
+      { label: 'Concerns', href: '/faculty/concerns', icon: <MessageSquareWarning /> },
       { label: 'Issued', href: '/faculty/issued', icon: <PackageOpen /> },
       { label: 'Returns', href: '/faculty/returns', icon: <PackageCheck /> },
       { label: 'Inventory', href: '/faculty/components', icon: <Warehouse /> },
@@ -90,6 +98,7 @@ export default function DashboardLayout({
     ADMIN: [
       { label: 'Projects', href: '/admin/projects', icon: <FolderKanban /> },
       { label: 'Inventory', href: '/admin/inventory', icon: <Warehouse /> },
+      { label: 'Concerns', href: '/admin/concerns', icon: <MessageSquareWarning /> },
       { label: 'Users', href: '/admin/users', icon: <UserCog /> },
       { label: 'Analytics', href: '/admin/analytics', icon: <ChartNoAxesColumn /> },
       { label: 'Students', href: '/admin/students', icon: <BookUser /> },
@@ -103,6 +112,34 @@ export default function DashboardLayout({
     if (!Array.isArray(notificationItems)) return 0;
     return notificationItems.filter((notification) => !notification.isRead).length;
   }, [notificationItems]);
+
+  const getNotificationHref = (notification: NotificationItem) => {
+    if (notification.metadata?.href) return notification.metadata.href;
+    if (notification.metadata?.requestId) return `/requests/${notification.metadata.requestId}`;
+    if (notification.metadata?.concernId) return '/student/concerns';
+    if (notification.metadata?.projectId) return `/student/projects/${notification.metadata.projectId}`;
+    return '/notifications';
+  };
+
+  const markNotificationRead = async (id: string) => {
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+      setNotificationItems((items) => items.map((notification) => (
+        notification.id === id ? { ...notification, isRead: true } : notification
+      )));
+    } catch {
+      // ignore
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await fetch('/api/notifications/read-all', { method: 'PATCH' });
+      setNotificationItems((items) => items.map((notification) => ({ ...notification, isRead: true })));
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-base)' }}>
@@ -220,19 +257,40 @@ export default function DashboardLayout({
                     notificationItems.map((notification) => (
                       <div
                         key={notification.id}
+                        onClick={() => {
+                          void markNotificationRead(notification.id);
+                          setNotificationOpen(false);
+                          router.push(getNotificationHref(notification));
+                        }}
                         style={{
                           padding: '14px 16px',
                           borderBottom: '1px solid var(--border)',
                           backgroundColor: notification.isRead ? 'var(--bg-surface)' : 'var(--accent-light)',
+                          cursor: 'pointer',
                         }}
                       >
                         <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{notification.title}</p>
                         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{notification.message}</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>{new Date(notification.createdAt).toLocaleString()}</p>
                       </div>
                     ))
                   )}
                 </div>
                 <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => void markAllNotificationsRead()}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--bg-elevated)',
+                      cursor: 'pointer',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    Mark All Read
+                  </button>
                   <button
                     type="button"
                     onClick={() => router.push('/notifications')}
@@ -282,10 +340,11 @@ export default function DashboardLayout({
         {/* Sidebar */}
         <aside
           style={{
-            width: sidebarOpen ? '240px' : '60px',
+            width: sidebarOpen ? '240px' : '84px',
+            minWidth: sidebarOpen ? '240px' : '84px',
             backgroundColor: 'var(--bg-surface)',
             borderRight: '1px solid var(--border)',
-            padding: '1.5rem 1rem',
+            padding: sidebarOpen ? '1.5rem 1rem' : '1.5rem 0.75rem',
             transition: 'width 0.3s ease',
             display: 'flex',
             flexDirection: 'column',
@@ -300,7 +359,7 @@ export default function DashboardLayout({
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: sidebarOpen ? 'center' : 'center',
+            justifyContent: sidebarOpen ? 'space-between' : 'center',
             marginBottom: '2rem',
             gap: sidebarOpen ? '0.75rem' : '0',
           }}
@@ -317,9 +376,11 @@ export default function DashboardLayout({
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              padding: '0.5rem',
+              padding: sidebarOpen ? '0.5rem' : '0',
               borderRadius: 'var(--radius)',
               transition: 'all 0.2s ease',
+              flex: sidebarOpen ? 1 : '0 0 auto',
+              justifyContent: sidebarOpen ? 'flex-start' : 'center',
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent-glow)';
@@ -350,6 +411,13 @@ export default function DashboardLayout({
               color: 'var(--text-secondary)',
               cursor: 'pointer',
               fontSize: '1.25rem',
+              width: '40px',
+              height: '40px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '10px',
+              flexShrink: 0,
             }}
           >
             ☰
@@ -363,8 +431,9 @@ export default function DashboardLayout({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.75rem',
+                  justifyContent: sidebarOpen ? 'flex-start' : 'center',
+                  gap: sidebarOpen ? '0.75rem' : '0',
+                  padding: sidebarOpen ? '0.75rem' : '0.85rem 0.5rem',
                   marginBottom: '0.5rem',
                   borderRadius: 'var(--radius)',
                   color: 'var(--text-secondary)',
@@ -372,6 +441,7 @@ export default function DashboardLayout({
                   transition: 'all 0.2s ease',
                   textDecoration: 'none',
                   whiteSpace: 'nowrap',
+                  minHeight: '52px',
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
@@ -383,7 +453,18 @@ export default function DashboardLayout({
                   (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
                 }}
               >
-                <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
+                <span
+                  style={{
+                    fontSize: '1.25rem',
+                    width: '24px',
+                    minWidth: '24px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {item.icon}
+                </span>
                 {sidebarOpen && <span>{item.label}</span>}
               </div>
             </Link>
@@ -394,12 +475,13 @@ export default function DashboardLayout({
         {((session.user as { id?: string; role?: string; department?: string })?.role ||'STUDENT') === 'STUDENT' && (
           <div
             style={{
-              padding: '1rem',
+              padding: sidebarOpen ? '1rem' : '0.5rem',
               backgroundColor: 'var(--bg-elevated)',
               borderRadius: 'var(--radius)',
               marginBottom: '1rem',
-              borderLeft: '3px solid var(--warning)',
+              borderLeft: sidebarOpen ? '3px solid var(--warning)' : 'none',
               marginTop: 'auto',
+              display: sidebarOpen ? 'block' : 'none',
             }}
           >
             {sidebarOpen && (
@@ -424,12 +506,15 @@ export default function DashboardLayout({
         {/* User Card */}
         <div
           style={{
-            padding: '1rem',
+            padding: sidebarOpen ? '1rem' : '0.5rem',
             backgroundColor: 'var(--bg-elevated)',
             borderRadius: 'var(--radius)',
             borderTop: '1px solid var(--border)',
-            paddingTop: '1rem',
+            paddingTop: sidebarOpen ? '1rem' : '0.5rem',
             marginTop: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: sidebarOpen ? 'stretch' : 'center',
           }}
         >
           {sidebarOpen && (
@@ -451,8 +536,9 @@ export default function DashboardLayout({
           <button
             onClick={() => signOut({ redirect: true, callbackUrl: '/login' })}
             style={{
-              width: '100%',
-              padding: '0.5rem',
+              width: sidebarOpen ? '100%' : '44px',
+              height: sidebarOpen ? 'auto' : '44px',
+              padding: sidebarOpen ? '0.5rem' : '0',
               backgroundColor: 'var(--danger)',
               color: 'white',
               borderRadius: 'var(--radius)',

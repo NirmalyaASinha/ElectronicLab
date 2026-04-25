@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { ilike, or, and, asc } from 'drizzle-orm';
+import { ilike, or, and, asc, eq } from 'drizzle-orm';
 
 export async function GET(req: Request) {
   try {
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     }
 
     if (role === 'STUDENT' || role === 'FACULTY' || role === 'ADMIN') {
-      conditions.push(users.role.eq(role));
+      conditions.push(eq(users.role, role));
     }
 
     const whereClause = conditions.length ? and(...conditions) : undefined;
