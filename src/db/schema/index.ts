@@ -6,3 +6,4 @@ export * from './notifications';
 export * from './lab-access';
 export * from './audit';
 export * from './projects';
+export * from './information';
