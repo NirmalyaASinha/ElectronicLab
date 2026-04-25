@@ -41,6 +41,8 @@ type DeviceItem = {
 
 type EntryRow = {
   id: string;
+  labId: string;
+  studentId: string;
   labName: string;
   labLocation?: string | null;
   studentName: string;
@@ -51,6 +53,15 @@ type EntryRow = {
   rfidUid: string;
 };
 
+type DayStudentSummary = {
+  studentId: string;
+  studentName: string;
+  studentRoll?: string | null;
+  labName: string;
+  visits: number;
+  firstEntryAt: string;
+};
+
 export default function AdminLabEntriesPage() {
   const [labs, setLabs] = useState<LabOption[]>([]);
   const [students, setStudents] = useState<StudentOption[]>([]);
@@ -58,6 +69,11 @@ export default function AdminLabEntriesPage() {
   const [devices, setDevices] = useState<DeviceItem[]>([]);
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [selectedLabId, setSelectedLabId] = useState('');
+  const [displayMonth, setDisplayMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selectedDateKey, setSelectedDateKey] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [rfidUid, setRfidUid] = useState('');
   const [deviceLabel, setDeviceLabel] = useState('');
@@ -71,6 +87,13 @@ export default function AdminLabEntriesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const toDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const loadData = async () => {
     try {
@@ -131,6 +154,87 @@ export default function AdminLabEntriesPage() {
     () => cards.find((card) => card.studentId === selectedStudentId) ?? null,
     [cards, selectedStudentId]
   );
+
+  const selectedLabEntries = useMemo(
+    () => (selectedLabId ? entries.filter((entry) => entry.labId === selectedLabId) : entries),
+    [entries, selectedLabId]
+  );
+
+  const activeStudentsCount = useMemo(
+    () => new Set(selectedLabEntries.filter((entry) => entry.status === 'INSIDE').map((entry) => entry.studentId)).size,
+    [selectedLabEntries]
+  );
+
+  const openSessionsCount = useMemo(
+    () => selectedLabEntries.filter((entry) => entry.status === 'INSIDE').length,
+    [selectedLabEntries]
+  );
+
+  const visitCounts = useMemo(
+    () =>
+      selectedLabEntries.reduce<Record<string, number>>((acc, entry) => {
+        const key = toDateKey(new Date(entry.entryAt));
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {}),
+    [selectedLabEntries]
+  );
+
+  const calendarDays = useMemo(() => {
+    const year = displayMonth.getFullYear();
+    const month = displayMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startOffset = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: Array<{ date: Date | null; key: string }> = [];
+
+    for (let i = 0; i < startOffset; i += 1) cells.push({ date: null, key: `pad-${i}` });
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push({ date: new Date(year, month, day), key: `day-${day}` });
+    }
+    return cells;
+  }, [displayMonth]);
+
+  const monthLabel = displayMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  const selectedDayEntries = useMemo(() => {
+    if (!selectedDateKey) return [];
+    return selectedLabEntries.filter((entry) => toDateKey(new Date(entry.entryAt)) === selectedDateKey);
+  }, [selectedDateKey, selectedLabEntries]);
+
+  const selectedDayStudents = useMemo(() => {
+    const grouped = new Map<string, DayStudentSummary>();
+
+    for (const entry of selectedDayEntries) {
+      const existing = grouped.get(entry.studentId);
+
+      if (existing) {
+        existing.visits += 1;
+        if (new Date(entry.entryAt).getTime() < new Date(existing.firstEntryAt).getTime()) {
+          existing.firstEntryAt = entry.entryAt;
+        }
+      } else {
+        grouped.set(entry.studentId, {
+          studentId: entry.studentId,
+          studentName: entry.studentName,
+          studentRoll: entry.studentRoll,
+          labName: entry.labName,
+          visits: 1,
+          firstEntryAt: entry.entryAt,
+        });
+      }
+    }
+
+    return Array.from(grouped.values()).sort(
+      (left, right) => new Date(left.firstEntryAt).getTime() - new Date(right.firstEntryAt).getTime()
+    );
+  }, [selectedDayEntries]);
+
+  useEffect(() => {
+    if (!selectedDateKey && selectedLabEntries.length > 0) {
+      setSelectedDateKey(toDateKey(new Date(selectedLabEntries[0].entryAt)));
+    }
+  }, [selectedDateKey, selectedLabEntries]);
 
   const filteredCards = useMemo(() => {
     const query = cardSearch.trim().toLowerCase();
@@ -449,6 +553,188 @@ export default function AdminLabEntriesPage() {
             {success}
           </div>
         ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Lab Visit Calendar</h2>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Click a date to see how many students entered and who they were.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDisplayMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDisplayMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-xl font-bold text-[var(--text-primary)]">{monthLabel}</h3>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {selectedLab ? selectedLab.name : 'All labs'} overview
+              </p>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <div key={day} className="py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-2 grid grid-cols-7 gap-2">
+              {calendarDays.map((cell) =>
+                cell.date ? (
+                  <button
+                    key={cell.key}
+                    type="button"
+                    onClick={() => setSelectedDateKey(toDateKey(cell.date!))}
+                    className={`min-h-20 rounded-xl border p-2 text-left transition ${
+                      selectedDateKey === toDateKey(cell.date)
+                        ? 'border-[var(--accent)] bg-[var(--accent-light)]'
+                        : 'border-[var(--border)] bg-[var(--bg-elevated)]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{cell.date.getDate()}</span>
+                      {visitCounts[toDateKey(cell.date)] ? (
+                        <span className="rounded-full bg-[var(--success-light)] px-2 py-0.5 text-[10px] font-semibold text-[var(--success)]">
+                          {visitCounts[toDateKey(cell.date)]}
+                        </span>
+                      ) : null}
+                    </div>
+                    {visitCounts[toDateKey(cell.date)] ? (
+                      <p className="mt-2 text-[11px] text-[var(--success)]">
+                        {visitCounts[toDateKey(cell.date)]} student{visitCounts[toDateKey(cell.date)] === 1 ? '' : 's'}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-[11px] text-[var(--text-muted)]">No visits</p>
+                    )}
+                  </button>
+                ) : (
+                  <div key={cell.key} />
+                )
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Day Details</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {selectedDateKey ? `Entries for ${selectedDateKey}` : 'Choose a date on the calendar.'}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-[var(--text-secondary)]">Students entered</span>
+                <span className="rounded-full bg-[var(--success-light)] px-3 py-1 text-sm font-semibold text-[var(--success)]">
+                  {selectedDayStudents.length}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {selectedDateKey ? (
+                selectedDayStudents.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                    No students entered on this date.
+                  </div>
+                ) : (
+                  selectedDayStudents.map((entry) => (
+                    <div key={entry.studentId} className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-[var(--text-primary)]">{entry.studentName}</p>
+                          <p className="text-sm text-[var(--text-secondary)]">
+                            {entry.studentRoll ? `${entry.studentRoll} • ` : ''}
+                            {entry.labName}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-[var(--success-light)] px-3 py-1 text-xs font-semibold text-[var(--success)]">
+                          {entry.visits} visit{entry.visits === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        First entry: {new Date(entry.firstEntryAt).toLocaleString()}
+                      </p>
+                    </div>
+                  ))
+                )
+              ) : (
+                <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                  Pick a date to see who entered.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5">
+            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+              <Users size={18} className="text-[var(--accent)]" />
+              <span className="text-sm font-medium">Active Students</span>
+            </div>
+            <div className="mt-3 text-3xl font-bold text-[var(--text-primary)]">{activeStudentsCount}</div>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Currently inside{selectedLab ? ` ${selectedLab.name}` : ' the selected lab'}.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5">
+            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+              <ScanLine size={18} className="text-[var(--accent)]" />
+              <span className="text-sm font-medium">Open Sessions</span>
+            </div>
+            <div className="mt-3 text-3xl font-bold text-[var(--text-primary)]">{openSessionsCount}</div>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">Active records for the selected lab.</p>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5">
+            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+              <Search size={18} className="text-[var(--accent)]" />
+              <span className="text-sm font-medium">Quick Search</span>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEntriesOverlayMode('recent');
+                  setEntriesOverlayOpen(true);
+                }}
+                className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                Recent
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEntriesOverlayMode('all');
+                  setEntriesOverlayOpen(true);
+                }}
+                className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                All Records
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6">

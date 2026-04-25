@@ -1,20 +1,31 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { PageTransition } from '@/components/dashboard/PageTransition';
-import { ScanLine, Users } from 'lucide-react';
+import { ScanLine, Search, Users } from 'lucide-react';
 
 type EntryRow = {
   id: string;
   labId: string;
   labName: string;
   labLocation?: string | null;
+  studentId: string;
   studentName: string;
   studentRoll?: string | null;
   status: 'INSIDE' | 'COMPLETED' | 'REVOKED' | 'NO_SHOW';
   entryAt: string;
   exitAt?: string | null;
   rfidUid: string;
+};
+
+type DayStudentSummary = {
+  studentId: string;
+  studentName: string;
+  studentRoll?: string | null;
+  labName: string;
+  visits: number;
+  firstEntryAt: string;
 };
 
 type LabItem = {
@@ -27,8 +38,23 @@ export default function FacultyLabEntriesPage() {
   const [labs, setLabs] = useState<LabItem[]>([]);
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [selectedLabId, setSelectedLabId] = useState('');
+  const [displayMonth, setDisplayMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selectedDateKey, setSelectedDateKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [entriesOverlayOpen, setEntriesOverlayOpen] = useState(false);
+  const [entriesOverlayMode, setEntriesOverlayMode] = useState<'recent' | 'all'>('all');
+  const [entrySearch, setEntrySearch] = useState('');
+
+  const toDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const loadData = async () => {
     try {
@@ -67,10 +93,212 @@ export default function FacultyLabEntriesPage() {
     void loadData();
   }, []);
 
-  const filteredEntries = useMemo(
+  const selectedLab = useMemo(
+    () => labs.find((lab) => lab.id === selectedLabId) ?? null,
+    [labs, selectedLabId]
+  );
+
+  const selectedLabEntries = useMemo(
     () => (selectedLabId ? entries.filter((entry) => entry.labId === selectedLabId) : entries),
     [entries, selectedLabId]
   );
+
+  const activeStudentsCount = useMemo(
+    () => new Set(selectedLabEntries.filter((entry) => entry.status === 'INSIDE').map((entry) => entry.studentId)).size,
+    [selectedLabEntries]
+  );
+
+  const recentEntries = useMemo(() => selectedLabEntries.slice(0, 6), [selectedLabEntries]);
+
+  const visitCounts = useMemo(
+    () =>
+      selectedLabEntries.reduce<Record<string, number>>((acc, entry) => {
+        const key = toDateKey(new Date(entry.entryAt));
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {}),
+    [selectedLabEntries]
+  );
+
+  const calendarDays = useMemo(() => {
+    const year = displayMonth.getFullYear();
+    const month = displayMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startOffset = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: Array<{ date: Date | null; key: string }> = [];
+
+    for (let i = 0; i < startOffset; i += 1) cells.push({ date: null, key: `pad-${i}` });
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push({ date: new Date(year, month, day), key: `day-${day}` });
+    }
+    return cells;
+  }, [displayMonth]);
+
+  const monthLabel = displayMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  const selectedDayEntries = useMemo(() => {
+    if (!selectedDateKey) return [];
+    return selectedLabEntries.filter((entry) => toDateKey(new Date(entry.entryAt)) === selectedDateKey);
+  }, [selectedDateKey, selectedLabEntries]);
+
+  const selectedDayStudents = useMemo(() => {
+    const grouped = new Map<string, DayStudentSummary>();
+
+    for (const entry of selectedDayEntries) {
+      const existing = grouped.get(entry.studentId);
+
+      if (existing) {
+        existing.visits += 1;
+        if (new Date(entry.entryAt).getTime() < new Date(existing.firstEntryAt).getTime()) {
+          existing.firstEntryAt = entry.entryAt;
+        }
+      } else {
+        grouped.set(entry.studentId, {
+          studentId: entry.studentId,
+          studentName: entry.studentName,
+          studentRoll: entry.studentRoll,
+          labName: entry.labName,
+          visits: 1,
+          firstEntryAt: entry.entryAt,
+        });
+      }
+    }
+
+    return Array.from(grouped.values()).sort(
+      (left, right) => new Date(left.firstEntryAt).getTime() - new Date(right.firstEntryAt).getTime()
+    );
+  }, [selectedDayEntries]);
+
+  useEffect(() => {
+    if (!selectedDateKey && selectedLabEntries.length > 0) {
+      setSelectedDateKey(toDateKey(new Date(selectedLabEntries[0].entryAt)));
+    }
+  }, [selectedDateKey, selectedLabEntries]);
+
+  const filteredEntries = useMemo(() => {
+    const source = entriesOverlayMode === 'recent' ? recentEntries : selectedLabEntries;
+    const query = entrySearch.trim().toLowerCase();
+    if (!query) return source;
+
+    return source.filter((entry) => {
+      return [
+        entry.studentName,
+        entry.studentRoll ?? '',
+        entry.labName,
+        entry.labLocation ?? '',
+        entry.rfidUid,
+        entry.status,
+      ].some((value) => value.toLowerCase().includes(query));
+    });
+  }, [entrySearch, entriesOverlayMode, recentEntries, selectedLabEntries]);
+
+  const entriesOverlay =
+    entriesOverlayOpen && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/55 p-4"
+            onClick={() => setEntriesOverlayOpen(false)}
+          >
+            <div
+              className="w-full max-w-6xl rounded-3xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                    {entriesOverlayMode === 'recent' ? 'Recent Entries' : 'All Entry Records'}
+                  </h2>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    Search by student, lab, RFID UID, or session status.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEntriesOverlayOpen(false)}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEntriesOverlayMode('recent')}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                    entriesOverlayMode === 'recent'
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
+                  }`}
+                >
+                  Recent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEntriesOverlayMode('all')}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                    entriesOverlayMode === 'all'
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
+                  }`}
+                >
+                  All Records
+                </button>
+              </div>
+
+              <div className="mt-5">
+                <input
+                  value={entrySearch}
+                  onChange={(event) => setEntrySearch(event.target.value)}
+                  placeholder="Search entry records..."
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-base)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+
+              <div className="mt-5 max-h-[65vh] overflow-y-auto pr-1">
+                <div className="space-y-3">
+                  {filteredEntries.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                      No entry records match your search.
+                    </div>
+                  ) : (
+                    filteredEntries.map((entry) => (
+                      <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-[var(--text-primary)]">{entry.studentName}</p>
+                            <p className="text-sm text-[var(--text-secondary)]">
+                              {entry.studentRoll ? `${entry.studentRoll} • ` : ''}
+                              {entry.labName}
+                              {entry.labLocation ? ` • ${entry.labLocation}` : ''}
+                            </p>
+                          </div>
+                          <span
+                            className="rounded-full px-3 py-1 text-xs font-semibold"
+                            style={{
+                              backgroundColor: entry.status === 'INSIDE' ? 'var(--success-light)' : 'var(--bg-base)',
+                              color: entry.status === 'INSIDE' ? 'var(--success)' : 'var(--text-muted)',
+                            }}
+                          >
+                            {entry.status}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid gap-2 text-xs text-[var(--text-muted)] md:grid-cols-3">
+                          <span>Entry: {new Date(entry.entryAt).toLocaleString()}</span>
+                          <span>Exit: {entry.exitAt ? new Date(entry.exitAt).toLocaleString() : 'Open'}</span>
+                          <span>RFID: {entry.rfidUid}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
   if (loading) {
     return (
@@ -93,6 +321,186 @@ export default function FacultyLabEntriesPage() {
             {error}
           </div>
         ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Lab Visit Calendar</h2>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Click a date to see how many students entered and who they were.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDisplayMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDisplayMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-xl font-bold text-[var(--text-primary)]">{monthLabel}</h3>
+              <p className="text-sm text-[var(--text-secondary)]">{selectedLab ? selectedLab.name : 'All labs'} overview</p>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <div key={day} className="py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-2 grid grid-cols-7 gap-2">
+              {calendarDays.map((cell) =>
+                cell.date ? (
+                  <button
+                    key={cell.key}
+                    type="button"
+                    onClick={() => setSelectedDateKey(toDateKey(cell.date!))}
+                    className={`min-h-20 rounded-xl border p-2 text-left transition ${
+                      selectedDateKey === toDateKey(cell.date)
+                        ? 'border-[var(--accent)] bg-[var(--accent-light)]'
+                        : 'border-[var(--border)] bg-[var(--bg-elevated)]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{cell.date.getDate()}</span>
+                      {visitCounts[toDateKey(cell.date)] ? (
+                        <span className="rounded-full bg-[var(--success-light)] px-2 py-0.5 text-[10px] font-semibold text-[var(--success)]">
+                          {visitCounts[toDateKey(cell.date)]}
+                        </span>
+                      ) : null}
+                    </div>
+                    {visitCounts[toDateKey(cell.date)] ? (
+                      <p className="mt-2 text-[11px] text-[var(--success)]">
+                        {visitCounts[toDateKey(cell.date)]} student{visitCounts[toDateKey(cell.date)] === 1 ? '' : 's'}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-[11px] text-[var(--text-muted)]">No visits</p>
+                    )}
+                  </button>
+                ) : (
+                  <div key={cell.key} />
+                )
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Day Details</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {selectedDateKey ? `Entries for ${selectedDateKey}` : 'Choose a date on the calendar.'}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-[var(--text-secondary)]">Students entered</span>
+                <span className="rounded-full bg-[var(--success-light)] px-3 py-1 text-sm font-semibold text-[var(--success)]">
+                  {selectedDayStudents.length}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {selectedDateKey ? (
+                selectedDayStudents.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                    No students entered on this date.
+                  </div>
+                ) : (
+                  selectedDayStudents.map((entry) => (
+                    <div key={entry.studentId} className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-[var(--text-primary)]">{entry.studentName}</p>
+                          <p className="text-sm text-[var(--text-secondary)]">
+                            {entry.studentRoll ? `${entry.studentRoll} • ` : ''}
+                            {entry.labName}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-[var(--success-light)] px-3 py-1 text-xs font-semibold text-[var(--success)]">
+                          {entry.visits} visit{entry.visits === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        First entry: {new Date(entry.firstEntryAt).toLocaleString()}
+                      </p>
+                    </div>
+                  ))
+                )
+              ) : (
+                <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                  Pick a date to see who entered.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5">
+            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+              <Users size={18} className="text-[var(--accent)]" />
+              <span className="text-sm font-medium">Active Students</span>
+            </div>
+            <div className="mt-3 text-3xl font-bold text-[var(--text-primary)]">{activeStudentsCount}</div>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Currently inside{selectedLab ? ` ${selectedLab.name}` : ' the selected lab'}.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5">
+            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+              <ScanLine size={18} className="text-[var(--accent)]" />
+              <span className="text-sm font-medium">Total Sessions</span>
+            </div>
+            <div className="mt-3 text-3xl font-bold text-[var(--text-primary)]">{selectedLabEntries.length}</div>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">All records for the selected lab.</p>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5">
+            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+              <Search size={18} className="text-[var(--accent)]" />
+              <span className="text-sm font-medium">Quick Search</span>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEntriesOverlayMode('recent');
+                  setEntriesOverlayOpen(true);
+                }}
+                className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                Recent
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEntriesOverlayMode('all');
+                  setEntriesOverlayOpen(true);
+                }}
+                className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                All Records
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -119,17 +527,34 @@ export default function FacultyLabEntriesPage() {
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recent Sessions</h2>
             </div>
             <div className="space-y-3">
-              {filteredEntries.length === 0 ? (
+              {recentEntries.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-secondary)]">
                   No sessions available.
                 </div>
               ) : (
-                filteredEntries.slice(0, 6).map((entry) => (
+                recentEntries.map((entry) => (
                   <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
-                    <p className="font-semibold text-[var(--text-primary)]">{entry.studentName}</p>
-                    <p className="text-sm text-[var(--text-secondary)]">{entry.labName}</p>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      {entry.status} • {new Date(entry.entryAt).toLocaleString()}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-[var(--text-primary)]">{entry.studentName}</p>
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          {entry.labName}
+                          {entry.labLocation ? ` • ${entry.labLocation}` : ''}
+                        </p>
+                      </div>
+                      <span
+                        className="rounded-full px-3 py-1 text-xs font-semibold"
+                        style={{
+                          backgroundColor: entry.status === 'INSIDE' ? 'var(--success-light)' : 'var(--bg-base)',
+                          color: entry.status === 'INSIDE' ? 'var(--success)' : 'var(--text-muted)',
+                        }}
+                      >
+                        {entry.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-[var(--text-muted)]">
+                      Entry {new Date(entry.entryAt).toLocaleString()}
+                      {entry.exitAt ? ` • Exit ${new Date(entry.exitAt).toLocaleString()}` : ' • Open'}
                     </p>
                   </div>
                 ))
@@ -138,9 +563,21 @@ export default function FacultyLabEntriesPage() {
           </div>
 
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <ScanLine size={18} className="text-[var(--accent)]" />
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Session Log</h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Search size={18} className="text-[var(--accent)]" />
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Session Log</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEntriesOverlayMode('all');
+                  setEntriesOverlayOpen(true);
+                }}
+                className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                Open Search
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
@@ -153,7 +590,7 @@ export default function FacultyLabEntriesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEntries.map((entry) => (
+                  {selectedLabEntries.map((entry) => (
                     <tr key={entry.id} className="border-t border-[var(--border)]">
                       <td className="py-3 pr-4">
                         <div className="font-medium text-[var(--text-primary)]">{entry.studentName}</div>
@@ -169,6 +606,8 @@ export default function FacultyLabEntriesPage() {
             </div>
           </div>
         </div>
+
+        {entriesOverlay}
       </div>
     </PageTransition>
   );
