@@ -88,6 +88,7 @@ export const labEntryTaps = pgTable('lab_entry_taps', {
     .references(() => labs.id),
   deviceId: uuid('device_id').references(() => labEntryDevices.id),
   rfidUid: text('rfid_uid').notNull(),
+  tapSignature: text('tap_signature'),
   action: labEntryActionEnum('action').notNull(),
   tappedAt: timestamp('tapped_at').defaultNow().notNull(),
   rawPayload: text('raw_payload'),

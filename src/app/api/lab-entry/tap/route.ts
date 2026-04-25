@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const deviceSecret = typeof body.deviceSecret === 'string' ? body.deviceSecret.trim() : '';
     const labId = typeof body.labId === 'string' ? body.labId.trim() : '';
     const rfidUid = typeof body.rfidUid === 'string' ? body.rfidUid.trim().toUpperCase() : '';
-    const action = typeof body.action === 'string' ? body.action.trim().toUpperCase() : '';
+    const actionInput = typeof body.action === 'string' ? body.action.trim().toUpperCase() : '';
     const rawPayload =
       typeof body.rawPayload === 'string'
         ? body.rawPayload
@@ -27,11 +27,11 @@ export async function POST(req: NextRequest) {
           ? JSON.stringify(body.rawPayload)
           : null;
 
-    if (!deviceUid || !deviceSecret || !labId || !rfidUid || !action) {
-      return NextResponse.json({ success: false, error: 'deviceUid, deviceSecret, labId, rfidUid, and action are required' }, { status: 400 });
+    if (!deviceUid || !deviceSecret || !labId || !rfidUid) {
+      return NextResponse.json({ success: false, error: 'deviceUid, deviceSecret, labId, and rfidUid are required' }, { status: 400 });
     }
 
-    if (!['ENTRY', 'EXIT'].includes(action)) {
+    if (actionInput && !['ENTRY', 'EXIT'].includes(actionInput)) {
       return NextResponse.json({ success: false, error: 'action must be ENTRY or EXIT' }, { status: 400 });
     }
 
@@ -121,7 +121,6 @@ export async function POST(req: NextRequest) {
         and(
           eq(labEntryTaps.labId, labId),
           eq(labEntryTaps.rfidUid, rfidUid),
-          eq(labEntryTaps.action, action as 'ENTRY' | 'EXIT'),
           gte(labEntryTaps.tappedAt, new Date(Date.now() - 5000))
         )
       )
@@ -146,6 +145,8 @@ export async function POST(req: NextRequest) {
       ),
     });
 
+    const action = actionInput || (openSession ? 'EXIT' : 'ENTRY');
+
     if (action === 'ENTRY' && openSession) {
       return NextResponse.json({
         success: false,
@@ -163,21 +164,56 @@ export async function POST(req: NextRequest) {
     }
 
     let result: 'ENTRY_CREATED' | 'EXIT_MARKED' = action === 'ENTRY' ? 'ENTRY_CREATED' : 'EXIT_MARKED';
+    const tapSignature = createHash('sha256')
+      .update(`${labId}:${device.id}:${rfidUid}:${Math.floor(Date.now() / 5000)}`)
+      .digest('hex');
 
-    const tapRow = await db
-      .insert(labEntryTaps)
-      .values({
-        labId,
-        deviceId: device.id,
-        rfidUid,
-        action: action as 'ENTRY' | 'EXIT',
-        rawPayload,
-        processed: false,
-      })
-      .returning({
-        id: labEntryTaps.id,
-        tappedAt: labEntryTaps.tappedAt,
-      });
+    let tapRow: Array<{ id: string; tappedAt: Date }> | undefined;
+    try {
+      tapRow = await db
+        .insert(labEntryTaps)
+        .values({
+          labId,
+          deviceId: device.id,
+          rfidUid,
+          tapSignature,
+          action: action as 'ENTRY' | 'EXIT',
+          rawPayload,
+          processed: false,
+        })
+        .returning({
+          id: labEntryTaps.id,
+          tappedAt: labEntryTaps.tappedAt,
+        });
+    } catch (insertError) {
+      if (insertError instanceof Error && 'code' in insertError && (insertError as { code?: string }).code === '23505') {
+        const existingTap = await db
+          .select({
+            id: labEntryTaps.id,
+            tappedAt: labEntryTaps.tappedAt,
+            result: labEntryTaps.result,
+          })
+          .from(labEntryTaps)
+          .where(eq(labEntryTaps.tapSignature, tapSignature))
+          .orderBy(desc(labEntryTaps.tappedAt))
+          .limit(1);
+
+        if (existingTap[0]) {
+          return NextResponse.json({
+            success: true,
+            result: existingTap[0].result ?? 'DUPLICATE_TAP',
+            duplicate: true,
+            tapId: existingTap[0].id,
+          });
+        }
+      }
+
+      throw insertError;
+    }
+
+    if (!tapRow?.[0]) {
+      return NextResponse.json({ success: false, error: 'Could not create tap record' }, { status: 500 });
+    }
 
     if (action === 'ENTRY') {
       await db.insert(labEntrySessions).values({
