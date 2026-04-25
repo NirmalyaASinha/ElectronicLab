@@ -1,92 +1,141 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { and, eq, inArray } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { db } from '@/db';
-import { issueRequests, issueRequestItems, components as componentsSchema } from '@/db/schema';
+import { components, projectComponents, projectMembers, projects, users } from '@/db/schema';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const session = await auth();
-  if (!session || !session.user) return NextResponse.json({ success: false, error: 'Unauthenticated' }, { status: 401 });
+async function canViewProject(projectId: string, userId: string, role: string) {
+  const projectRows = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+  if (!projectRows.length) return { allowed: false, project: null as any };
 
-  const projectId = params.id;
+  const project = projectRows[0];
+  if (role === 'ADMIN' || role === 'FACULTY' || project.ownerId === userId || project.visibility === 'OPEN') {
+    return { allowed: true, project };
+  }
 
+  const memberRows = await db
+    .select({ id: projectMembers.id })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+    .limit(1);
+
+  return { allowed: memberRows.length > 0, project };
+}
+
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const rows = await db.query.projectComponents.findMany({ where: (pc, { eq }) => eq(pc.projectId, projectId) });
-
-    // fetch component metadata in one query
-    const componentIds = Array.from(new Set(rows.map((r) => r.componentId).filter(Boolean)));
-    const componentsMap: Record<string, any> = {};
-    if (componentIds.length > 0) {
-      const comps = await db.query.components.findMany({ where: (c, { in: _in }) => _in(c.id, componentIds) });
-      for (const c of comps) componentsMap[c.id] = c;
+    const session = await auth();
+    if (!session?.user?.id || !session.user.role) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = rows.map((r) => ({
-      ...r,
-      component: componentsMap[r.componentId] ?? null,
-    }));
+    const visibility = await canViewProject(params.id, String(session.user.id), String(session.user.role).toUpperCase());
+    if (!visibility.project) {
+      return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
+    }
+    if (!visibility.allowed) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
 
-    return NextResponse.json({ success: true, data: payload });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+    const rows = await db.select().from(projectComponents).where(eq(projectComponents.projectId, params.id));
+    const componentIds = rows.map((row) => row.componentId);
+    const userIds = rows.map((row) => row.addedBy).filter(Boolean) as string[];
+    const componentRows = componentIds.length
+      ? await db.select({ id: components.id, name: components.name, category: components.category }).from(components).where(inArray(components.id, componentIds))
+      : [];
+    const userRows = userIds.length
+      ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, userIds))
+      : [];
+    const componentMap = new Map(componentRows.map((row) => [row.id, row]));
+    const userMap = new Map(userRows.map((row) => [row.id, row]));
+
+    return NextResponse.json({
+      success: true,
+      data: rows.map((row) => ({
+        ...row,
+        component: componentMap.get(row.componentId) || null,
+        addedByUser: row.addedBy ? userMap.get(row.addedBy) || null : null,
+      })),
+    });
+  } catch (error) {
+    console.error('[GET /api/projects/:id/components]', error);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const session = await auth();
-  if (!session || !session.user) return NextResponse.json({ success: false, error: 'Unauthenticated' }, { status: 401 });
-
-  const projectId = params.id;
-  const userId = session.user.id as string;
-
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const body = await req.json();
-    const { componentId, quantity = 1, notes = '', createRequest = false } = body;
-
-    // Verify membership
-    const member = await db.query.projectMembers.findFirst({ where: (pm, { eq }) => eq(pm.projectId, projectId) && eq(pm.userId, userId) });
-    if (!member && session.user.role !== 'ADMIN') {
-      return NextResponse.json({ success: false, error: 'Not a project member' }, { status: 403 });
+    const session = await auth();
+    if (!session?.user?.id || !session.user.role) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // ensure project exists
-    const project = await db.query.projects.findFirst({ where: (p, { eq }) => eq(p.id, projectId) });
-    if (!project) {
+    const projectRows = await db.select().from(projects).where(eq(projects.id, params.id)).limit(1);
+    if (!projectRows.length) {
       return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
     }
 
-    // Validate component availability
-    const comp = await db.query.components.findFirst({ where: (c, { eq }) => eq(c.id, componentId) });
-    if (!comp) return NextResponse.json({ success: false, error: 'Component not found' }, { status: 404 });
-    if ((comp.quantityAvailable ?? 0) < quantity) {
-      return NextResponse.json({ success: false, error: 'Insufficient quantity available' }, { status: 400 });
-    }
-    if (comp.maxIssueQuantity && quantity > comp.maxIssueQuantity) {
-      return NextResponse.json({ success: false, error: `Max issue quantity is ${comp.maxIssueQuantity}` }, { status: 400 });
+    const project = projectRows[0];
+    const role = String(session.user.role).toUpperCase();
+    if (role !== 'ADMIN' && project.ownerId !== String(session.user.id)) {
+      return NextResponse.json({ success: false, error: 'Only owner or admin can add components' }, { status: 403 });
     }
 
-    // perform insert and decrement availability
-    const inserted = await db.insert('project_components').values({ project_id: projectId, component_id: componentId, assigned_to: userId, quantity, notes }).returning('*');
-    await db.update(componentsSchema).set({ quantityAvailable: (comp.quantityAvailable ?? 0) - quantity }).where((c, { eq }) => eq(c.id, componentId));
+    const body = await req.json();
+    const componentId = typeof body.componentId === 'string' ? body.componentId.trim() : '';
+    const notes = typeof body.notes === 'string' ? body.notes.trim() : null;
+    const quantity = Math.max(1, Number(body.quantity) || 1);
 
-    let createdRequest: any = null;
-    if (createRequest) {
-      // create an issue_request and an item so the checkout appears in the normal requests flow
-      const req = await db.insert(issueRequests).values({
-        studentId: userId,
-        facultyId: null,
-        status: 'ISSUED',
-        purpose: `Project checkout (${projectId})`,
-        issuedAt: new Date().toISOString(),
-      }).returning('*');
-
-      const requestId = Array.isArray(req) ? req[0].id : (req as any).id;
-
-      await db.insert(issueRequestItems).values({ request_id: requestId, component_id: componentId, quantity }).returning('*');
-      createdRequest = requestId;
+    if (!componentId) {
+      return NextResponse.json({ success: false, error: 'componentId is required' }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, data: inserted, createdRequest });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+    const inserted = await db
+      .insert(projectComponents)
+      .values({
+        projectId: params.id,
+        componentId,
+        quantity,
+        notes,
+        addedBy: String(session.user.id),
+      })
+      .returning();
+
+    return NextResponse.json({ success: true, data: inserted[0] }, { status: 201 });
+  } catch (error) {
+    console.error('[POST /api/projects/:id/components]', error);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id || !session.user.role) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const projectRows = await db.select().from(projects).where(eq(projects.id, params.id)).limit(1);
+    if (!projectRows.length) {
+      return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
+    }
+
+    const project = projectRows[0];
+    const role = String(session.user.role).toUpperCase();
+    if (role !== 'ADMIN' && project.ownerId !== String(session.user.id)) {
+      return NextResponse.json({ success: false, error: 'Only owner or admin can remove components' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const entryId = typeof body.entryId === 'string' ? body.entryId.trim() : '';
+    if (!entryId) {
+      return NextResponse.json({ success: false, error: 'entryId is required' }, { status: 400 });
+    }
+
+    await db.delete(projectComponents).where(and(eq(projectComponents.id, entryId), eq(projectComponents.projectId, params.id)));
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[DELETE /api/projects/:id/components]', error);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,0 +1,52 @@
+BEGIN;
+
+DO $$
+BEGIN
+  ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'CONCERN_CREATED';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'CONCERN_REPLIED';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'CONCERN_STATUS_UPDATED';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'PROJECT_CREATED';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'PROJECT_JOINED';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'PROJECT_MEMBER_ADDED';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'PROJECT_UPDATED';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+COMMIT;
