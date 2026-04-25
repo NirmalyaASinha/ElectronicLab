@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PageTransition } from '@/components/dashboard/PageTransition';
 import { ScanLine, Search, Users } from 'lucide-react';
@@ -49,6 +49,8 @@ export default function FacultyLabEntriesPage() {
   const [entriesOverlayOpen, setEntriesOverlayOpen] = useState(false);
   const [entriesOverlayMode, setEntriesOverlayMode] = useState<'recent' | 'all'>('all');
   const [entrySearch, setEntrySearch] = useState('');
+  const deferredEntrySearch = useDeferredValue(entrySearch);
+  const [visibleHistoryEntries, setVisibleHistoryEntries] = useState(10);
 
   const toDateKey = (date: Date) => {
     const year = date.getFullYear();
@@ -115,6 +117,11 @@ export default function FacultyLabEntriesPage() {
   const selectedLabEntries = useMemo(
     () => (selectedLabId ? entries.filter((entry) => entry.labId === selectedLabId) : entries),
     [entries, selectedLabId]
+  );
+
+  const visibleLabHistoryEntries = useMemo(
+    () => selectedLabEntries.slice(0, visibleHistoryEntries),
+    [selectedLabEntries, visibleHistoryEntries]
   );
 
   const activeStudentsCount = useMemo(
@@ -192,7 +199,7 @@ export default function FacultyLabEntriesPage() {
 
   const filteredEntries = useMemo(() => {
     const source = entriesOverlayMode === 'recent' ? recentEntries : selectedLabEntries;
-    const query = entrySearch.trim().toLowerCase();
+    const query = deferredEntrySearch.trim().toLowerCase();
     if (!query) return source;
 
     return source.filter((entry) => {
@@ -205,7 +212,7 @@ export default function FacultyLabEntriesPage() {
         entry.status,
       ].some((value) => value.toLowerCase().includes(query));
     });
-  }, [entrySearch, entriesOverlayMode, recentEntries, selectedLabEntries]);
+  }, [deferredEntrySearch, entriesOverlayMode, recentEntries, selectedLabEntries]);
 
   const entriesOverlay =
     entriesOverlayOpen && typeof document !== 'undefined'
@@ -376,51 +383,53 @@ export default function FacultyLabEntriesPage() {
             </div>
 
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-[var(--text-primary)]">{monthLabel}</h3>
+              <h3 className="text-lg font-bold text-[var(--text-primary)] sm:text-xl">{monthLabel}</h3>
               <p className="text-sm text-[var(--text-secondary)]">{selectedLab ? selectedLab.name : 'All labs'} overview</p>
             </div>
 
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-[var(--text-muted)] sm:gap-2 sm:text-xs">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="py-2">
+                <div key={day} className="py-1 sm:py-2">
                   {day}
                 </div>
               ))}
             </div>
 
-            <div className="mt-2 grid grid-cols-7 gap-2">
+            <div className="mt-2 overflow-x-auto pb-1">
+              <div className="grid min-w-[320px] grid-cols-7 gap-1 sm:gap-2">
               {calendarDays.map((cell) =>
                 cell.date ? (
                   <button
                     key={cell.key}
                     type="button"
                     onClick={() => setSelectedDateKey(toDateKey(cell.date!))}
-                    className={`min-h-20 rounded-xl border p-2 text-left transition ${
+                    className={`min-h-16 rounded-xl border p-1.5 text-left transition sm:min-h-20 sm:p-2 ${
                       selectedDateKey === toDateKey(cell.date)
                         ? 'border-[var(--accent)] bg-[var(--accent-light)]'
                         : 'border-[var(--border)] bg-[var(--bg-elevated)]'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-semibold text-[var(--text-primary)]">{cell.date.getDate()}</span>
+                      <span className="text-xs font-semibold text-[var(--text-primary)] sm:text-sm">{cell.date.getDate()}</span>
                       {visitCounts[toDateKey(cell.date)] ? (
-                        <span className="rounded-full bg-[var(--success-light)] px-2 py-0.5 text-[10px] font-semibold text-[var(--success)]">
+                        <span className="rounded-full bg-[var(--success-light)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--success)] sm:px-2 sm:text-[10px]">
                           {visitCounts[toDateKey(cell.date)]}
                         </span>
                       ) : null}
                     </div>
                     {visitCounts[toDateKey(cell.date)] ? (
-                      <p className="mt-2 text-[11px] text-[var(--success)]">
+                      <p className="mt-1.5 text-[10px] text-[var(--success)] sm:mt-2 sm:text-[11px]">
                         {visitCounts[toDateKey(cell.date)]} student{visitCounts[toDateKey(cell.date)] === 1 ? '' : 's'}
                       </p>
                     ) : (
-                      <p className="mt-2 text-[11px] text-[var(--text-muted)]">No visits</p>
+                      <p className="mt-1.5 text-[10px] text-[var(--text-muted)] sm:mt-2 sm:text-[11px]">No visits</p>
                     )}
                   </button>
                 ) : (
                   <div key={cell.key} />
                 )
               )}
+              </div>
             </div>
           </div>
 
@@ -616,7 +625,7 @@ export default function FacultyLabEntriesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedLabEntries.map((entry) => (
+                  {visibleLabHistoryEntries.map((entry) => (
                     <tr key={entry.id} className="border-t border-[var(--border)]">
                       <td className="py-3 pr-4">
                         <div className="font-medium text-[var(--text-primary)]">{entry.studentName}</div>
@@ -630,6 +639,15 @@ export default function FacultyLabEntriesPage() {
                 </tbody>
               </table>
             </div>
+            {selectedLabEntries.length > visibleHistoryEntries ? (
+              <button
+                type="button"
+                onClick={() => setVisibleHistoryEntries((current) => current + 10)}
+                className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                Load more
+              </button>
+            ) : null}
           </div>
         </div>
 

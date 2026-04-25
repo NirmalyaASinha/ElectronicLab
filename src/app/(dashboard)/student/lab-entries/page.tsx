@@ -23,6 +23,7 @@ export default function StudentLabEntriesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [visibleEntries, setVisibleEntries] = useState(10);
 
   const toDateKey = (date: Date) => {
     const year = date.getFullYear();
@@ -114,6 +115,8 @@ export default function StudentLabEntriesPage() {
     year: 'numeric',
   });
 
+  const visibleHistoryEntries = useMemo(() => entries.slice(0, visibleEntries), [entries, visibleEntries]);
+
   if (loading) {
     return (
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 text-[var(--text-secondary)]">
@@ -176,48 +179,50 @@ export default function StudentLabEntriesPage() {
             </div>
 
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-[var(--text-primary)]">{monthLabel}</h3>
+              <h3 className="text-lg font-bold text-[var(--text-primary)] sm:text-xl">{monthLabel}</h3>
               <p className="text-sm text-[var(--text-secondary)]">
                 {totalVisitsInMonth} lab visit{totalVisitsInMonth === 1 ? '' : 's'} this month.
               </p>
             </div>
 
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-[var(--text-muted)] sm:gap-2 sm:text-xs">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="py-2">
+                <div key={day} className="py-1 sm:py-2">
                   {day}
                 </div>
               ))}
             </div>
 
-            <div className="mt-2 grid grid-cols-7 gap-2">
+            <div className="mt-2 overflow-x-auto pb-1">
+              <div className="grid min-w-[320px] grid-cols-7 gap-1 sm:gap-2">
               {calendarDays.map((cell) =>
                 cell.date ? (
                   <div
                     key={cell.key}
-                    className="min-h-20 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-2"
+                    className="min-h-16 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-1.5 sm:min-h-20 sm:p-2"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-semibold text-[var(--text-primary)]">{cell.date.getDate()}</span>
+                      <span className="text-xs font-semibold text-[var(--text-primary)] sm:text-sm">{cell.date.getDate()}</span>
                       {visitCounts[toDateKey(cell.date)] ? (
-                        <span className="rounded-full bg-[var(--success-light)] px-2 py-0.5 text-[10px] font-semibold text-[var(--success)]">
+                        <span className="rounded-full bg-[var(--success-light)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--success)] sm:px-2 sm:text-[10px]">
                           {visitCounts[toDateKey(cell.date)]}
                         </span>
                       ) : null}
                     </div>
                     {visitCounts[toDateKey(cell.date)] ? (
-                      <p className="mt-2 text-[11px] text-[var(--success)]">
+                      <p className="mt-1.5 text-[10px] text-[var(--success)] sm:mt-2 sm:text-[11px]">
                         {visitCounts[toDateKey(cell.date)]} visit
                         {visitCounts[toDateKey(cell.date)] === 1 ? '' : 's'}
                       </p>
                     ) : (
-                      <p className="mt-2 text-[11px] text-[var(--text-muted)]">No visit</p>
+                      <p className="mt-1.5 text-[10px] text-[var(--text-muted)] sm:mt-2 sm:text-[11px]">No visit</p>
                     )}
                   </div>
                 ) : (
                   <div key={cell.key} />
                 )
               )}
+              </div>
             </div>
           </div>
 
@@ -233,7 +238,7 @@ export default function StudentLabEntriesPage() {
                   No lab entries found yet.
                 </div>
               ) : (
-                entries.map((entry) => (
+                visibleHistoryEntries.map((entry) => (
                   <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                     <p className="font-semibold text-[var(--text-primary)]">{entry.labName}</p>
                     <p className="text-sm text-[var(--text-secondary)]">{entry.labLocation}</p>
@@ -247,6 +252,16 @@ export default function StudentLabEntriesPage() {
                 ))
               )}
             </div>
+
+            {entries.length > visibleEntries ? (
+              <button
+                type="button"
+                onClick={() => setVisibleEntries((current) => current + 10)}
+                className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                Load more
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

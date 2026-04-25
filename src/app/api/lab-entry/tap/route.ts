@@ -216,17 +216,35 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'ENTRY') {
-      await db.insert(labEntrySessions).values({
-        labId,
-        studentId: card.studentId,
-        rfidCardId: card.id,
-        entryDeviceId: device.id,
-        entryTapId: tapRow[0].id,
-        entryAt: tapRow[0].tappedAt,
-        status: 'INSIDE',
-      });
+      try {
+        await db.insert(labEntrySessions).values({
+          labId,
+          studentId: card.studentId,
+          rfidCardId: card.id,
+          entryDeviceId: device.id,
+          entryTapId: tapRow[0].id,
+          entryAt: tapRow[0].tappedAt,
+          status: 'INSIDE',
+        });
+      } catch (sessionInsertError) {
+        if (sessionInsertError instanceof Error && 'code' in sessionInsertError && (sessionInsertError as { code?: string }).code === '23505') {
+          await db
+            .update(labEntryTaps)
+            .set({ processed: true, result: 'DUPLICATE_TAP' })
+            .where(eq(labEntryTaps.id, tapRow[0].id));
+
+          return NextResponse.json({
+            success: true,
+            result: 'DUPLICATE_TAP',
+            duplicate: true,
+            tapId: tapRow[0].id,
+          });
+        }
+
+        throw sessionInsertError;
+      }
     } else {
-      await db
+      const exitUpdate = await db
         .update(labEntrySessions)
         .set({
           exitAt: tapRow[0].tappedAt,
@@ -235,7 +253,24 @@ export async function POST(req: NextRequest) {
           status: 'COMPLETED',
           updatedAt: new Date(),
         })
-        .where(eq(labEntrySessions.id, openSession.id));
+        .where(eq(labEntrySessions.id, openSession.id))
+        .returning({
+          id: labEntrySessions.id,
+        });
+
+      if (!exitUpdate[0]) {
+        await db
+          .update(labEntryTaps)
+          .set({ processed: true, result: 'DUPLICATE_TAP' })
+          .where(eq(labEntryTaps.id, tapRow[0].id));
+
+        return NextResponse.json({
+          success: true,
+          result: 'DUPLICATE_TAP',
+          duplicate: true,
+          tapId: tapRow[0].id,
+        });
+      }
     }
 
     await db
