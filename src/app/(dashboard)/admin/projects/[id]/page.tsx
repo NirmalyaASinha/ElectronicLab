@@ -54,7 +54,22 @@ export default function AdminProjectDetail({ params }: { params: { id: string } 
           <button onClick={handleAddMember}>Add</button>
         </div>
         <div style={{ marginTop: 8 }}>
-          {members.length === 0 ? <div style={{ color: 'var(--text-secondary)' }}>No members yet</div> : members.map(m => <div key={m.id}>{m.userId}</div>)}
+          {members.length === 0 ? (
+            <div style={{ color: 'var(--text-secondary)' }}>No members yet</div>
+          ) : (
+            members.map((m) => (
+              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 8, background: 'var(--bg-elevated)', marginBottom: 6 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>{(m.user?.name || m.userId || '').charAt(0)}</div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{m.user?.name || m.userId}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{m.user?.email || ''}</div>
+                </div>
+                <div style={{ marginLeft: 'auto' }}>
+                  <button onClick={async () => { if (confirm('Remove member?')) { await fetch(`/api/projects/${id}/members/${m.id}`, { method: 'DELETE' }); location.reload(); } }} style={{ padding: '6px 8px' }}>Remove</button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>

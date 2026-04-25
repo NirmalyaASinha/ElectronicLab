@@ -95,7 +95,7 @@ export default function ProjectDetail({ params }: { params: { id: string } }) {
               <div key={c.id} style={{ padding: 10, borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontWeight: 700 }}>{c.componentId}</div>
+                    <div style={{ fontWeight: 700 }}>{c.component?.name ?? c.componentId}</div>
                     <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Assigned to: {c.assignedTo || '—'}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>

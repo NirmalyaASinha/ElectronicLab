@@ -10,23 +10,22 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const projectId = params.id;
 
   try {
-    const rows = await db.query.projectComponents.findMany({
-      where: (pc, { eq }) => eq(pc.projectId, projectId),
-      columns: {
-        id: true,
-        projectId: true,
-        componentId: true,
-        assignedTo: true,
-        quantity: true,
-        checkedOutAt: true,
-        returnedAt: true,
-        isReturned: true,
-        notes: true,
-        createdAt: true,
-      },
-    });
+    const rows = await db.query.projectComponents.findMany({ where: (pc, { eq }) => eq(pc.projectId, projectId) });
 
-    return NextResponse.json({ success: true, data: rows });
+    // fetch component metadata in one query
+    const componentIds = Array.from(new Set(rows.map((r) => r.componentId).filter(Boolean)));
+    const componentsMap: Record<string, any> = {};
+    if (componentIds.length > 0) {
+      const comps = await db.query.components.findMany({ where: (c, { in: _in }) => _in(c.id, componentIds) });
+      for (const c of comps) componentsMap[c.id] = c;
+    }
+
+    const payload = rows.map((r) => ({
+      ...r,
+      component: componentsMap[r.componentId] ?? null,
+    }));
+
+    return NextResponse.json({ success: true, data: payload });
   } catch (err) {
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
   }
