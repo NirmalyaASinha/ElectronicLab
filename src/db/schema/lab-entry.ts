@@ -26,6 +26,11 @@ export const labEntryTapResultEnum = pgEnum('lab_entry_tap_result', [
   'DUPLICATE_TAP',
 ]);
 
+export const labEntryActionEnum = pgEnum('lab_entry_action', [
+  'ENTRY',
+  'EXIT',
+]);
+
 export const labRfidCards = pgTable('lab_rfid_cards', {
   id: uuid('id').defaultRandom().primaryKey(),
   rfidUid: text('rfid_uid').notNull().unique(),
@@ -83,6 +88,7 @@ export const labEntryTaps = pgTable('lab_entry_taps', {
     .references(() => labs.id),
   deviceId: uuid('device_id').references(() => labEntryDevices.id),
   rfidUid: text('rfid_uid').notNull(),
+  action: labEntryActionEnum('action').notNull(),
   tappedAt: timestamp('tapped_at').defaultNow().notNull(),
   rawPayload: text('raw_payload'),
   processed: boolean('processed').default(false).notNull(),
