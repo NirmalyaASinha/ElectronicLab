@@ -4,12 +4,20 @@ import { db } from '@/db';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await auth();
-  if (!session || !session.user || session.user.role !== 'ADMIN') return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+  if (!session || !session.user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
 
   try {
     const body = await req.json();
     const { userId } = body;
     const projectId = params.id;
+
+    // permission: admin OR project owner OR faculty
+    const project = await db.query.projects.findFirst({ where: (p, { eq }) => eq(p.id, projectId) });
+    const isOwner = project && project.ownerId === (session.user.id as string);
+    if (!(session.user.role === 'ADMIN' || isOwner || session.user.role === 'FACULTY')) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+    }
+
     const existing = await db.query.projectMembers.findFirst({ where: (pm, { eq }) => eq(pm.projectId, projectId) && eq(pm.userId, userId) });
     if (existing) return NextResponse.json({ success: false, error: 'Already a member' }, { status: 400 });
     const inserted = await db.insert('project_members').values({ project_id: projectId, user_id: userId }).returning('*');

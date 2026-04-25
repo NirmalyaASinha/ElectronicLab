@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { DashboardTopBar } from '@/components/dashboard/DashboardTopBar';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Bell, Moon, Sun } from 'lucide-react';
+import { Bell, Moon, Sun, FolderKanban, Warehouse, UserCog, ChartNoAxesColumn, BookUser, KeyRound, ContactRound, CircleCheckBig, PackageOpen, PackageCheck, ScanSearch, ListChecks, ReceiptIndianRupee } from 'lucide-react';
 
 type NotificationItem = {
   id: string;
@@ -70,28 +70,31 @@ export default function DashboardLayout({
 
   const navItems = {
     STUDENT: [
-      { label: 'Browse', href: '/student/browse', icon: '📦' },
-      { label: 'My Requests', href: '/student/requests', icon: '📋' },
-      { label: 'Lab Access', href: '/student/lab-access', icon: '🔬' },
-      { label: 'My Fines', href: '/student/fines', icon: '⚠️' },
-      { label: 'Profile', href: '/profile', icon: '👤' },
+      { label: 'Browse', href: '/student/browse', icon: <ScanSearch /> },
+      { label: 'My Projects', href: '/student/projects', icon: <FolderKanban /> },
+      { label: 'My Requests', href: '/student/requests', icon: <ListChecks /> },
+      { label: 'Lab Access', href: '/student/lab-access', icon: <KeyRound /> },
+      { label: 'My Fines', href: '/student/fines', icon: <ReceiptIndianRupee /> },
+      { label: 'Profile', href: '/profile', icon: <ContactRound /> },
     ],
     FACULTY: [
-      { label: 'Approvals', href: '/faculty/approvals', icon: '✅' },
-      { label: 'Issued', href: '/faculty/issued', icon: '📤' },
-      { label: 'Returns', href: '/faculty/returns', icon: '📥' },
-      { label: 'Inventory', href: '/faculty/components', icon: '🔍' },
-      { label: 'Students', href: '/faculty/students', icon: '👥' },
-      { label: 'Lab Access', href: '/faculty/lab-access', icon: '🔬' },
-      { label: 'Profile', href: '/profile', icon: '👤' },
+      { label: 'Student Projects', href: '/student/projects', icon: <FolderKanban /> },
+      { label: 'Approvals', href: '/faculty/approvals', icon: <CircleCheckBig /> },
+      { label: 'Issued', href: '/faculty/issued', icon: <PackageOpen /> },
+      { label: 'Returns', href: '/faculty/returns', icon: <PackageCheck /> },
+      { label: 'Inventory', href: '/faculty/components', icon: <Warehouse /> },
+      { label: 'Students', href: '/faculty/students', icon: <BookUser /> },
+      { label: 'Lab Access', href: '/faculty/lab-access', icon: <KeyRound /> },
+      { label: 'Profile', href: '/profile', icon: <ContactRound /> },
     ],
     ADMIN: [
-      { label: 'Inventory', href: '/admin/inventory', icon: '🏭' },
-      { label: 'Users', href: '/admin/users', icon: '👥' },
-      { label: 'Analytics', href: '/admin/analytics', icon: '📊' },
-      { label: 'Students', href: '/admin/students', icon: '👥' },
-      { label: 'Lab Access', href: '/admin/labs', icon: '🔬' },
-      { label: 'Profile', href: '/profile', icon: '👤' },
+      { label: 'Projects', href: '/admin/projects', icon: <FolderKanban /> },
+      { label: 'Inventory', href: '/admin/inventory', icon: <Warehouse /> },
+      { label: 'Users', href: '/admin/users', icon: <UserCog /> },
+      { label: 'Analytics', href: '/admin/analytics', icon: <ChartNoAxesColumn /> },
+      { label: 'Students', href: '/admin/students', icon: <BookUser /> },
+      { label: 'Lab Access', href: '/admin/labs', icon: <KeyRound /> },
+      { label: 'Profile', href: '/profile', icon: <ContactRound /> },
     ],
   };
 
